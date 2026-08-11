@@ -1,0 +1,27 @@
+[
+  {
+    "id": "S001",
+    "name": "Aisha Khan",
+    "email": "aisha.khan@students.latrobe.edu.au"
+  },
+  {
+    "id": "S002",
+    "name": "Ben Chen",
+    "email": "ben.chen@students.latrobe.edu.au"
+  },
+  {
+    "id": "S003",
+    "name": "Chloe Ferreira",
+    "email": "chloe.ferreira@students.latrobe.edu.au"
+  },
+  {
+    "id": "S004",
+    "name": "Dinesh Patel",
+    "email": "dinesh.patel@students.latrobe.edu.au"
+  },
+  {
+    "id": "S005",
+    "name": "Emma Wilson",
+    "email": "emma.wilson@students.latrobe.edu.au"
+  }
+]

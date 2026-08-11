@@ -1,0 +1,452 @@
+[
+  {
+    "id": 1,
+    "assessment_id": 1,
+    "student_id": "S001",
+    "lo_code": "LO1",
+    "comment": "Excellent architectural decisions. The separation between the API and data layer is clean and follows SOLID principles.",
+    "score": 93.3,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 2,
+    "assessment_id": 1,
+    "student_id": "S001",
+    "lo_code": "LO2",
+    "comment": "Excellent use of Git \u2014 clean commit messages, feature branches, and consistent PR reviews across the team.",
+    "score": 93.3,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 3,
+    "assessment_id": 1,
+    "student_id": "S001",
+    "lo_code": "LO3",
+    "comment": "Well-documented ER diagram matches the implementation exactly. Impressive attention to detail.",
+    "score": 81.6,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 4,
+    "assessment_id": 1,
+    "student_id": "S001",
+    "lo_code": "LO4",
+    "comment": "Excellent RESTful design. Resource naming, HTTP verbs, and status codes all follow best practices.",
+    "score": 81.7,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 5,
+    "assessment_id": 1,
+    "student_id": "S001",
+    "lo_code": "LO5",
+    "comment": "Impressive documentation \u2014 the README allows a new developer to set up the project in under 10 minutes.",
+    "score": 80.5,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 6,
+    "assessment_id": 2,
+    "student_id": "S001",
+    "lo_code": "LO1",
+    "comment": "Impressive use of design patterns. The dependency injection approach makes the system easy to test.",
+    "score": 92.6,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 7,
+    "assessment_id": 2,
+    "student_id": "S001",
+    "lo_code": "LO2",
+    "comment": "Strong evidence of agile practice. Sprint retrospectives are well-documented and lead to real process improvements.",
+    "score": 90.6,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 8,
+    "assessment_id": 2,
+    "student_id": "S001",
+    "lo_code": "LO3",
+    "comment": "Schema is reasonable but the mastery_scores table would benefit from a composite index on (student_id, lo_id).",
+    "score": 73.2,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 9,
+    "assessment_id": 2,
+    "student_id": "S001",
+    "lo_code": "LO4",
+    "comment": "Strong API documentation with clear request/response examples. Postman collection is comprehensive.",
+    "score": 86.1,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 10,
+    "assessment_id": 2,
+    "student_id": "S001",
+    "lo_code": "LO5",
+    "comment": "Strong oral presentation \u2014 team members explain trade-offs confidently and answer questions well.",
+    "score": 81.8,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 11,
+    "assessment_id": 1,
+    "student_id": "S002",
+    "lo_code": "LO1",
+    "comment": "Several core features are incomplete. The mastery calculation module has placeholder logic.",
+    "score": 48.8,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 12,
+    "assessment_id": 1,
+    "student_id": "S002",
+    "lo_code": "LO2",
+    "comment": "Git history shows most commits from one team member. Redistribute the workload.",
+    "score": 44.8,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 13,
+    "assessment_id": 1,
+    "student_id": "S002",
+    "lo_code": "LO3",
+    "comment": "Missing foreign key constraints allow orphan rubric feedback records to exist. This will cause data integrity problems.",
+    "score": 22.7,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 14,
+    "assessment_id": 1,
+    "student_id": "S002",
+    "lo_code": "LO4",
+    "comment": "Response format is inconsistent \u2014 some endpoints return arrays, others wrap them in objects.",
+    "score": 69.8,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 15,
+    "assessment_id": 1,
+    "student_id": "S002",
+    "lo_code": "LO5",
+    "comment": "Documentation is minimal. New team members would struggle to onboard.",
+    "score": 26.5,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 16,
+    "assessment_id": 2,
+    "student_id": "S002",
+    "lo_code": "LO1",
+    "comment": "Good effort. Naming conventions are inconsistent \u2014 please standardise.",
+    "score": 60.5,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 17,
+    "assessment_id": 2,
+    "student_id": "S002",
+    "lo_code": "LO2",
+    "comment": "Git usage is functional but commit messages are often unclear. 'fixed stuff' is not helpful.",
+    "score": 75.5,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 18,
+    "assessment_id": 2,
+    "student_id": "S002",
+    "lo_code": "LO3",
+    "comment": "Missing foreign key constraints allow orphan rubric feedback records to exist. This will cause data integrity problems.",
+    "score": 29.5,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 19,
+    "assessment_id": 2,
+    "student_id": "S002",
+    "lo_code": "LO4",
+    "comment": "No API documentation provided. Impossible to consume without reading the source code.",
+    "score": 25.5,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 20,
+    "assessment_id": 2,
+    "student_id": "S002",
+    "lo_code": "LO5",
+    "comment": "Documentation is minimal. New team members would struggle to onboard.",
+    "score": 29.1,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 21,
+    "assessment_id": 1,
+    "student_id": "S003",
+    "lo_code": "LO1",
+    "comment": "Weak handling of edge cases. What happens when a student has no submitted assessments?",
+    "score": 22.4,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 22,
+    "assessment_id": 1,
+    "student_id": "S003",
+    "lo_code": "LO2",
+    "comment": "Team dynamics are okay but some members contribute significantly more than others.",
+    "score": 72.5,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 23,
+    "assessment_id": 1,
+    "student_id": "S003",
+    "lo_code": "LO3",
+    "comment": "Strong query design. The use of joins over subqueries improves performance noticeably.",
+    "score": 84.9,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 24,
+    "assessment_id": 1,
+    "student_id": "S003",
+    "lo_code": "LO4",
+    "comment": "Weak validation \u2014 the /mastery endpoint accepts negative scores without rejecting them.",
+    "score": 38.9,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 25,
+    "assessment_id": 1,
+    "student_id": "S003",
+    "lo_code": "LO5",
+    "comment": "Report is well-written but some sections feel rushed. The security considerations chapter needs more depth.",
+    "score": 60.5,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 26,
+    "assessment_id": 2,
+    "student_id": "S003",
+    "lo_code": "LO1",
+    "comment": "Strong implementation \u2014 code is readable, well-commented, and demonstrates thoughtful design.",
+    "score": 87.2,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 27,
+    "assessment_id": 2,
+    "student_id": "S003",
+    "lo_code": "LO2",
+    "comment": "Team collaboration is exemplary. Everyone contributes to code review and pair programming sessions.",
+    "score": 95.8,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 28,
+    "assessment_id": 2,
+    "student_id": "S003",
+    "lo_code": "LO3",
+    "comment": "The ER diagram is out of date compared to the actual schema \u2014 please synchronise.",
+    "score": 67.0,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 29,
+    "assessment_id": 2,
+    "student_id": "S003",
+    "lo_code": "LO4",
+    "comment": "Weak validation \u2014 the /mastery endpoint accepts negative scores without rejecting them.",
+    "score": 35.6,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 30,
+    "assessment_id": 2,
+    "student_id": "S003",
+    "lo_code": "LO5",
+    "comment": "Excellent report structure with clear technical justification for every design decision.",
+    "score": 93.4,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 31,
+    "assessment_id": 1,
+    "student_id": "S004",
+    "lo_code": "LO1",
+    "comment": "Good effort. Naming conventions are inconsistent \u2014 please standardise.",
+    "score": 69.0,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 32,
+    "assessment_id": 1,
+    "student_id": "S004",
+    "lo_code": "LO2",
+    "comment": "No evidence of sprint retrospectives. This is a core agile practice \u2014 please implement.",
+    "score": 32.3,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 33,
+    "assessment_id": 1,
+    "student_id": "S004",
+    "lo_code": "LO3",
+    "comment": "Schema shows denormalisation issues. Student names should not be duplicated across tables.",
+    "score": 37.3,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 34,
+    "assessment_id": 1,
+    "student_id": "S004",
+    "lo_code": "LO4",
+    "comment": "Excellent RESTful design. Resource naming, HTTP verbs, and status codes all follow best practices.",
+    "score": 95.5,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 35,
+    "assessment_id": 1,
+    "student_id": "S004",
+    "lo_code": "LO5",
+    "comment": "Excellent report structure with clear technical justification for every design decision.",
+    "score": 94.3,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 36,
+    "assessment_id": 2,
+    "student_id": "S004",
+    "lo_code": "LO1",
+    "comment": "Reasonable design overall, but some functions are doing too much. Consider breaking them into smaller units.",
+    "score": 64.2,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 37,
+    "assessment_id": 2,
+    "student_id": "S004",
+    "lo_code": "LO2",
+    "comment": "Sprint planning is happening but not consistently documented. Please attach minutes to each sprint.",
+    "score": 67.7,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 38,
+    "assessment_id": 2,
+    "student_id": "S004",
+    "lo_code": "LO3",
+    "comment": "Schema shows denormalisation issues. Student names should not be duplicated across tables.",
+    "score": 43.1,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 39,
+    "assessment_id": 2,
+    "student_id": "S004",
+    "lo_code": "LO4",
+    "comment": "Impressive error handling \u2014 every endpoint returns meaningful error messages with correct status codes.",
+    "score": 93.5,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 40,
+    "assessment_id": 2,
+    "student_id": "S004",
+    "lo_code": "LO5",
+    "comment": "Presentation was disorganised \u2014 team members contradicted each other on key decisions.",
+    "score": 23.8,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 41,
+    "assessment_id": 1,
+    "student_id": "S005",
+    "lo_code": "LO1",
+    "comment": "Implementation works but the code duplication in the service layer should be refactored.",
+    "score": 55.1,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 42,
+    "assessment_id": 1,
+    "student_id": "S005",
+    "lo_code": "LO2",
+    "comment": "Merge conflicts are being handled poorly. Several times, working code has been overwritten.",
+    "score": 29.0,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 43,
+    "assessment_id": 1,
+    "student_id": "S005",
+    "lo_code": "LO3",
+    "comment": "Schema is reasonable but the mastery_scores table would benefit from a composite index on (student_id, lo_id).",
+    "score": 67.2,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 44,
+    "assessment_id": 1,
+    "student_id": "S005",
+    "lo_code": "LO4",
+    "comment": "Impressive error handling \u2014 every endpoint returns meaningful error messages with correct status codes.",
+    "score": 85.4,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 45,
+    "assessment_id": 1,
+    "student_id": "S005",
+    "lo_code": "LO5",
+    "comment": "README covers the basics but is missing environment variable documentation.",
+    "score": 59.8,
+    "created_at": "2026-07-18T04:19:17.760453"
+  },
+  {
+    "id": 46,
+    "assessment_id": 2,
+    "student_id": "S005",
+    "lo_code": "LO1",
+    "comment": "Reasonable design overall, but some functions are doing too much. Consider breaking them into smaller units.",
+    "score": 67.9,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 47,
+    "assessment_id": 2,
+    "student_id": "S005",
+    "lo_code": "LO2",
+    "comment": "Merge conflicts are being handled poorly. Several times, working code has been overwritten.",
+    "score": 51.2,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 48,
+    "assessment_id": 2,
+    "student_id": "S005",
+    "lo_code": "LO3",
+    "comment": "Some queries would be more efficient with proper indexing. Please review the slow-query log.",
+    "score": 55.5,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 49,
+    "assessment_id": 2,
+    "student_id": "S005",
+    "lo_code": "LO4",
+    "comment": "No API documentation provided. Impossible to consume without reading the source code.",
+    "score": 28.1,
+    "created_at": "2026-08-01T04:19:17.760453"
+  },
+  {
+    "id": 50,
+    "assessment_id": 2,
+    "student_id": "S005",
+    "lo_code": "LO5",
+    "comment": "Impressive documentation \u2014 the README allows a new developer to set up the project in under 10 minutes.",
+    "score": 97.0,
+    "created_at": "2026-08-01T04:19:17.760453"
+  }
+]
