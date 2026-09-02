@@ -1,0 +1,118 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { fetchOutcomeDetail } from "@/lib/api";
+import type { OutcomeDetail } from "@/lib/types";
+import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { MasteryBadge } from "@/components/ui/Badge";
+import { BackHeader } from "@/components/BackHeader";
+import { Spinner, EmptyState } from "@/components/ui/PageState";
+import {
+  FileTextIcon,
+  PlayIcon,
+  QuoteIcon,
+} from "@/components/ui/icons";
+
+export default function OutcomeDetailPage() {
+  const router = useRouter();
+  const params = useParams<{ outcomeId: string }>();
+  const outcomeId = params.outcomeId;
+
+  const [detail, setDetail] = useState<OutcomeDetail | null | undefined>(
+    undefined,
+  );
+
+  useEffect(() => {
+    let active = true;
+    fetchOutcomeDetail(outcomeId).then((d) => {
+      if (active) setDetail(d);
+    });
+    return () => {
+      active = false;
+    };
+  }, [outcomeId]);
+
+  if (detail === undefined) return <Spinner label="Loading outcome" />;
+
+  if (detail === null) {
+    return (
+      <div className="space-y-6">
+        <BackHeader title="Outcome not found" />
+        <EmptyState title="We couldn't find that learning outcome.">
+          It may not be tracked for this subject yet.
+        </EmptyState>
+      </div>
+    );
+  }
+
+  const { outcome, reasons, resources } = detail;
+
+  return (
+    <div className="space-y-6">
+      <BackHeader
+        title={outcome.name}
+        subtitle="STM3LPP"
+        right={<MasteryBadge value={outcome.mastery} />}
+      />
+
+      <Card className="space-y-7">
+        {/* Why this score */}
+        <section>
+          <h2 className="text-sm font-medium text-muted">Why this score</h2>
+          <ul className="mt-3 space-y-2">
+            {reasons.map((fb) => (
+              <li
+                key={fb.id}
+                className="flex items-start gap-3 rounded-xl bg-neutral-50 px-4 py-3"
+              >
+                <QuoteIcon className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+                <div>
+                  <p className="text-[15px] font-medium text-foreground">
+                    “{fb.comment}”
+                  </p>
+                  <p className="mt-0.5 text-sm text-muted">
+                    {fb.assignment} · scored {fb.score}/{fb.maxScore}
+                  </p>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        {/* Recommended resources */}
+        <section>
+          <h2 className="text-sm font-medium text-muted">
+            Recommended resources
+          </h2>
+          <ul className="mt-3 space-y-2">
+            {resources.map((r) => (
+              <li key={r.id}>
+                <a
+                  href={r.href ?? "#"}
+                  className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 hover:bg-neutral-50"
+                >
+                  <FileTextIcon className="h-4 w-4 shrink-0 text-neutral-400" />
+                  <span className="text-[15px] text-foreground">{r.title}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <p className="mt-2 text-xs text-muted">
+            Grounded in your subject material — not freely generated.
+          </p>
+        </section>
+
+        <Button
+          size="lg"
+          fullWidth
+          onClick={() => router.push(`/quiz/${outcome.id}`)}
+        >
+          <PlayIcon className="h-4 w-4" />
+          Generate practice quiz
+        </Button>
+      </Card>
+    </div>
+  );
+}
