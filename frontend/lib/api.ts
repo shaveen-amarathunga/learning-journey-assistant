@@ -34,8 +34,122 @@ export async function fetchStudent(): Promise<Student> {
 }
 
 export async function fetchDashboard(): Promise<DashboardData> {
-  // return fetch(`${API_BASE_URL}/dashboard`).then((r) => r.json());
-  return delay(mock.dashboard);
+  const studentId = "S001";
+  const subjectCode = "CSE3CAP";
+
+  const [
+    studentResponse,
+    masteryResponse,
+    feedbackResponse,
+    subjectResponse,
+  ] = await Promise.all([
+    fetch(`${API_BASE_URL}/students/${studentId}`),
+    fetch(`${API_BASE_URL}/students/${studentId}/mastery`),
+    fetch(`${API_BASE_URL}/students/${studentId}/feedback`),
+    fetch(`${API_BASE_URL}/subjects/${subjectCode}`),
+  ]);
+
+  if (
+    !studentResponse.ok ||
+    !masteryResponse.ok ||
+    !feedbackResponse.ok ||
+    !subjectResponse.ok
+  ) {
+    throw new Error("Failed to load dashboard data");
+  }
+
+  const studentJson = await studentResponse.json();
+  const masteryJson = await masteryResponse.json();
+  const feedbackJson = await feedbackResponse.json();
+  const subjectJson = await subjectResponse.json();
+
+  const studentData = studentJson.data;
+  const masteryData = masteryJson.data;
+  const feedbackData = feedbackJson.data ?? [];
+  const subjectData = subjectJson.data;
+
+  const outcomes = masteryData.map(
+    (item: {
+      lo_code: string;
+      lo_id: number;
+      score: number;
+    }) => {
+      const matchingOutcome = subjectData.learning_outcomes.find(
+        (lo: { lo_code: string; description: string }) =>
+          lo.lo_code === item.lo_code,
+      );
+
+      return {
+        id: item.lo_code.toLowerCase(),
+        name: matchingOutcome?.description ?? item.lo_code,
+        mastery: Math.round(item.score),
+      };
+    },
+  );
+
+  const overallMastery =
+    masteryData.length > 0
+      ? Math.round(
+          masteryData.reduce(
+            (sum: number, item: { score: number }) => sum + item.score,
+            0,
+          ) / masteryData.length,
+        )
+      : 0;
+
+  const recentFeedback = feedbackData.slice(0, 3).map(
+    (
+      item: {
+        id?: number;
+        comment?: string;
+        feedback?: string;
+        assessment_name?: string;
+        lo_code?: string;
+        score?: number;
+        max_score?: number;
+      },
+      index: number,
+    ) => {
+      const matchingOutcome = subjectData.learning_outcomes.find(
+        (lo: { lo_code: string; description: string }) =>
+          lo.lo_code === item.lo_code,
+      );
+
+      return {
+        id: String(item.id ?? index),
+        comment: item.comment ?? item.feedback ?? "Assessment feedback",
+        assignment: item.assessment_name ?? "Assessment",
+        outcomeId: (item.lo_code ?? "unknown").toLowerCase(),
+        outcomeName:
+          matchingOutcome?.description ??
+          item.lo_code ??
+          "Learning Outcome",
+        score: item.score ?? 0,
+        maxScore: item.max_score ?? 100,
+      };
+    },
+  );
+
+  return {
+    student: {
+      id: studentData.id,
+      name: studentData.name,
+      initials: studentData.name
+        .split(" ")
+        .map((part: string) => part[0])
+        .join("")
+        .slice(0, 2)
+        .toUpperCase(),
+      email: studentData.email,
+      subjectCode: subjectData.code,
+      subjectName: subjectData.name,
+    },
+    overallMastery,
+    outcomesTracked: outcomes.length,
+    quizzesCompleted: 0,
+    outcomes,
+    recentFeedback,
+  };
 }
 
 export async function fetchOutcomeDetail(
