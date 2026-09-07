@@ -1,0 +1,22 @@
+[
+  {
+    "lo_code": "LO1",
+    "description": "Apply software engineering principles to design and implement a working system."
+  },
+  {
+    "lo_code": "LO2",
+    "description": "Collaborate effectively in an agile team using version control and sprint-based delivery."
+  },
+  {
+    "lo_code": "LO3",
+    "description": "Design and query relational databases to support application requirements."
+  },
+  {
+    "lo_code": "LO4",
+    "description": "Develop and consume RESTful APIs following industry best practices."
+  },
+  {
+    "lo_code": "LO5",
+    "description": "Communicate technical decisions clearly through written documentation and oral presentation."
+  }
+]
