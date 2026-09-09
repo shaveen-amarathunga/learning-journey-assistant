@@ -37,6 +37,7 @@ export interface Resource {
 
 export interface OutcomeDetail {
   outcome: LearningOutcome;
+  subjectCode: string;
   reasons: FeedbackItem[]; // "Why this score"
   resources: Resource[];
 }

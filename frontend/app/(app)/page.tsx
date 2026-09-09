@@ -9,7 +9,7 @@ import { masteryTextClass } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { MasteryBar } from "@/components/ui/MasteryBar";
-import { Spinner } from "@/components/ui/PageState";
+import { Spinner, ErrorState } from "@/components/ui/PageState";
 import { AccountMenu } from "@/components/AccountMenu";
 import {
   BellIcon,
@@ -20,18 +20,37 @@ import {
 } from "@/components/ui/icons";
 
 export default function DashboardPage() {
+  // Remount on retry so the loading/error state resets cleanly.
+  const [reloadKey, setReloadKey] = useState(0);
+  return (
+    <Dashboard key={reloadKey} onRetry={() => setReloadKey((k) => k + 1)} />
+  );
+}
+
+function Dashboard({ onRetry }: { onRetry: () => void }) {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
-    fetchDashboard().then((d) => {
-      if (active) setData(d);
-    });
+    fetchDashboard()
+      .then((d) => {
+        if (active) setData(d);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
     return () => {
       active = false;
     };
   }, []);
+
+  if (failed) {
+    return (
+      <ErrorState title="Couldn't load your dashboard" onRetry={onRetry} />
+    );
+  }
 
   if (!data) return <Spinner label="Loading your dashboard" />;
 

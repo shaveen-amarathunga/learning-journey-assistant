@@ -56,7 +56,7 @@ export const dashboard: DashboardData = {
   ],
 };
 
-const OUTCOME_DETAILS: Record<string, OutcomeDetail> = {
+const OUTCOME_DETAILS: Record<string, Omit<OutcomeDetail, "subjectCode">> = {
   "simplex-algorithm": {
     outcome: OUTCOMES[0],
     reasons: [
@@ -265,7 +265,8 @@ const QUIZZES: Record<string, Quiz> = {
 // --- accessors ------------------------------------------------------------
 
 export function getOutcomeDetail(outcomeId: string): OutcomeDetail | undefined {
-  return OUTCOME_DETAILS[outcomeId];
+  const detail = OUTCOME_DETAILS[outcomeId];
+  return detail ? { ...detail, subjectCode: "STM3LPP" } : undefined;
 }
 
 export function getQuiz(outcomeId: string): Quiz | undefined {

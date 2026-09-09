@@ -8,7 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { MasteryBadge } from "@/components/ui/Badge";
 import { BackHeader } from "@/components/BackHeader";
-import { Spinner, EmptyState } from "@/components/ui/PageState";
+import { Spinner, EmptyState, ErrorState } from "@/components/ui/PageState";
 import {
   FileTextIcon,
   PlayIcon,
@@ -16,23 +16,56 @@ import {
 } from "@/components/ui/icons";
 
 export default function OutcomeDetailPage() {
-  const router = useRouter();
   const params = useParams<{ outcomeId: string }>();
-  const outcomeId = params.outcomeId;
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Keying on outcomeId + reloadKey remounts on navigation and on retry,
+  // so loading/error state always starts fresh.
+  return (
+    <OutcomeDetailView
+      key={`${params.outcomeId}:${reloadKey}`}
+      outcomeId={params.outcomeId}
+      onRetry={() => setReloadKey((k) => k + 1)}
+    />
+  );
+}
+
+function OutcomeDetailView({
+  outcomeId,
+  onRetry,
+}: {
+  outcomeId: string;
+  onRetry: () => void;
+}) {
+  const router = useRouter();
 
   const [detail, setDetail] = useState<OutcomeDetail | null | undefined>(
     undefined,
   );
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
-    fetchOutcomeDetail(outcomeId).then((d) => {
-      if (active) setDetail(d);
-    });
+    fetchOutcomeDetail(outcomeId)
+      .then((d) => {
+        if (active) setDetail(d);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
     return () => {
       active = false;
     };
   }, [outcomeId]);
+
+  if (failed) {
+    return (
+      <div className="space-y-6">
+        <BackHeader title="Learning outcome" />
+        <ErrorState onRetry={onRetry} />
+      </div>
+    );
+  }
 
   if (detail === undefined) return <Spinner label="Loading outcome" />;
 
@@ -47,13 +80,13 @@ export default function OutcomeDetailPage() {
     );
   }
 
-  const { outcome, reasons, resources } = detail;
+  const { outcome, subjectCode, reasons, resources } = detail;
 
   return (
     <div className="space-y-6">
       <BackHeader
         title={outcome.name}
-        subtitle="STM3LPP"
+        subtitle={subjectCode}
         right={<MasteryBadge value={outcome.mastery} />}
       />
 
@@ -61,6 +94,11 @@ export default function OutcomeDetailPage() {
         {/* Why this score */}
         <section>
           <h2 className="text-sm font-medium text-muted">Why this score</h2>
+          {reasons.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">
+              No graded feedback is linked to this outcome yet.
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-2">
             {reasons.map((fb) => (
               <li
@@ -86,22 +124,32 @@ export default function OutcomeDetailPage() {
           <h2 className="text-sm font-medium text-muted">
             Recommended resources
           </h2>
-          <ul className="mt-3 space-y-2">
-            {resources.map((r) => (
-              <li key={r.id}>
-                <a
-                  href={r.href ?? "#"}
-                  className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 hover:bg-neutral-50"
-                >
-                  <FileTextIcon className="h-4 w-4 shrink-0 text-neutral-400" />
-                  <span className="text-[15px] text-foreground">{r.title}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-muted">
-            Grounded in your subject material — not freely generated.
-          </p>
+          {resources.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">
+              Linked subject resources are coming soon.
+            </p>
+          ) : (
+            <>
+              <ul className="mt-3 space-y-2">
+                {resources.map((r) => (
+                  <li key={r.id}>
+                    <a
+                      href={r.href ?? "#"}
+                      className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 hover:bg-neutral-50"
+                    >
+                      <FileTextIcon className="h-4 w-4 shrink-0 text-neutral-400" />
+                      <span className="text-[15px] text-foreground">
+                        {r.title}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted">
+                Grounded in your subject material — not freely generated.
+              </p>
+            </>
+          )}
         </section>
 
         <Button
