@@ -90,7 +90,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
         </button>
       </header>
 
-      <div className="space-y-6 lg:grid lg:grid-cols-5 lg:items-start lg:gap-6 lg:space-y-0">
+      <div className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-6 lg:space-y-0">
         {/* Left card — priorities */}
         <Card className="min-w-0 space-y-7 lg:col-span-2">
           {/* Focus this week */}
