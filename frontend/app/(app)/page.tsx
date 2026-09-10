@@ -6,11 +6,13 @@ import { useRouter } from "next/navigation";
 import { fetchDashboard } from "@/lib/api";
 import type { DashboardData } from "@/lib/types";
 import { masteryTextClass } from "@/lib/format";
+import { pickFocusOutcome } from "@/lib/focus";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { MasteryBar } from "@/components/ui/MasteryBar";
 import { Spinner, ErrorState } from "@/components/ui/PageState";
 import { AccountMenu } from "@/components/AccountMenu";
+import { FocusPanel } from "@/components/FocusPanel";
 import {
   BellIcon,
   ChevronRightIcon,
@@ -55,6 +57,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
   if (!data) return <Spinner label="Loading your dashboard" />;
 
   const { student } = data;
+  const focus = pickFocusOutcome(data.outcomes, data.recentFeedback);
 
   return (
     <Card className="space-y-7 p-6 sm:p-8">
@@ -77,6 +80,9 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
           <BellIcon />
         </button>
       </header>
+
+      {/* Focus this week */}
+      {focus ? <FocusPanel focus={focus} /> : null}
 
       {/* Stat tiles */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
