@@ -147,6 +147,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
     const code = item.lo_code ?? "";
     return {
       id: outcomeSlug(code || `lo-${item.lo_id}`),
+      code: code || undefined,
       name:
         outcomeNameByCode.get(code.toUpperCase()) ?? (code || "Learning outcome"),
       mastery: Math.round(item.score),
@@ -228,6 +229,7 @@ export async function fetchOutcomeDetail(
   return {
     outcome: {
       id: outcomeId,
+      code: lo.lo_code,
       name: lo.description,
       mastery: Math.round(masteryScore?.score ?? 0),
     },

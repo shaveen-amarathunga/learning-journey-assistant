@@ -23,9 +23,9 @@ export const student: Student = {
 };
 
 const OUTCOMES = [
-  { id: "simplex-algorithm", name: "Simplex algorithm", mastery: 40 },
-  { id: "probability-distributions", name: "Probability distributions", mastery: 60 },
-  { id: "graphical-lp-methods", name: "Graphical LP methods", mastery: 75 },
+  { id: "simplex-algorithm", code: "LO1", name: "Simplex algorithm", mastery: 40 },
+  { id: "probability-distributions", code: "LO2", name: "Probability distributions", mastery: 60 },
+  { id: "graphical-lp-methods", code: "LO3", name: "Graphical LP methods", mastery: 75 },
 ];
 
 export const dashboard: DashboardData = {

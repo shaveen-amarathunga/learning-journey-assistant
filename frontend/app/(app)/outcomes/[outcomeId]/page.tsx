@@ -85,8 +85,10 @@ function OutcomeDetailView({
   return (
     <div className="space-y-6">
       <BackHeader
-        title={outcome.name}
-        subtitle={subjectCode}
+        title={outcome.code ?? outcome.name}
+        subtitle={
+          outcome.code ? `${subjectCode} · ${outcome.name}` : subjectCode
+        }
         right={<MasteryBadge value={outcome.mastery} />}
       />
 

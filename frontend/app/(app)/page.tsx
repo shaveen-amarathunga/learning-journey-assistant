@@ -101,7 +101,12 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
                 href={`/outcomes/${o.id}`}
                 className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-neutral-50"
               >
-                <MasteryBar label={o.name} value={o.mastery} className="flex-1" />
+                <MasteryBar
+                  label={o.code ?? o.name}
+                  sublabel={o.code ? o.name : undefined}
+                  value={o.mastery}
+                  className="min-w-0 flex-1"
+                />
                 <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-400" />
               </Link>
             </li>

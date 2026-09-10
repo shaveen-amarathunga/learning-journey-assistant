@@ -13,8 +13,9 @@ export interface Student {
 export type MasteryStatus = "low" | "mid" | "high";
 
 export interface LearningOutcome {
-  id: string; // slug, e.g. "simplex-algorithm"
-  name: string; // e.g. "Simplex algorithm"
+  id: string; // slug, e.g. "simplex-algorithm" / "lo1"
+  code?: string; // short label, e.g. "LO1"
+  name: string; // full description, e.g. "Simplex algorithm"
   mastery: number; // 0 - 100
 }
 
