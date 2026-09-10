@@ -16,6 +16,13 @@ import {
 } from "@/components/ui/icons";
 
 type Phase = "loading" | "quiz" | "predict" | "submitting" | "results";
+type Confidence = "low" | "med" | "high";
+
+const CONFIDENCE_OPTIONS: { level: Confidence; label: string }[] = [
+  { level: "low", label: "Guessing" },
+  { level: "med", label: "Fairly sure" },
+  { level: "high", label: "Certain" },
+];
 
 export default function QuizPage() {
   const router = useRouter();
@@ -26,6 +33,7 @@ export default function QuizPage() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [confidence, setConfidence] = useState<Record<string, Confidence>>({});
   const [predicted, setPredicted] = useState<number | null>(null);
   const [result, setResult] = useState<QuizResult | null>(null);
 
@@ -56,13 +64,18 @@ export default function QuizPage() {
   const total = quiz!.questions.length;
   const question = quiz!.questions[index];
   const selected = answers[question?.id ?? ""] ?? "";
+  const conf = confidence[question?.id ?? ""];
 
   function choose(key: string) {
     setAnswers((prev) => ({ ...prev, [question.id]: key }));
   }
 
+  function rateConfidence(level: Confidence) {
+    setConfidence((prev) => ({ ...prev, [question.id]: level }));
+  }
+
   function next() {
-    if (!selected) return;
+    if (!selected || !conf) return;
     if (index < total - 1) {
       setIndex(index + 1);
       return;
@@ -80,6 +93,7 @@ export default function QuizPage() {
 
   function retry() {
     setAnswers({});
+    setConfidence({});
     setIndex(0);
     setPredicted(null);
     setResult(null);
@@ -97,7 +111,14 @@ export default function QuizPage() {
   }
 
   if (phase === "results" && result) {
-    return <Results result={result} predicted={predicted} onRetry={retry} />;
+    return (
+      <Results
+        result={result}
+        predicted={predicted}
+        confidence={confidence}
+        onRetry={retry}
+      />
+    );
   }
 
   const progress = ((index + 1) / total) * 100;
@@ -176,7 +197,38 @@ export default function QuizPage() {
         </div>
       </fieldset>
 
-      <Button size="lg" fullWidth onClick={next} disabled={!selected}>
+      {selected ? (
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            How sure are you?
+          </p>
+          <div className="mt-2 flex gap-2">
+            {CONFIDENCE_OPTIONS.map(({ level, label }) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => rateConfidence(level)}
+                aria-pressed={conf === level}
+                className={cn(
+                  "flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors",
+                  conf === level
+                    ? "border-blue-500 bg-blue-50 text-foreground"
+                    : "border-border text-muted hover:bg-neutral-50",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
+      <Button
+        size="lg"
+        fullWidth
+        onClick={next}
+        disabled={!selected || !conf}
+      >
         {index < total - 1 ? "Submit answer" : "Finish quiz"}
       </Button>
 
@@ -255,14 +307,19 @@ function calibrationNote(predicted: number, actual: number): string {
 function Results({
   result,
   predicted,
+  confidence,
   onRetry,
 }: {
   result: QuizResult;
   predicted: number | null;
+  confidence: Record<string, Confidence>;
   onRetry: () => void;
 }) {
   const changed = result.masteryAfter - result.masteryBefore;
   const direction = changed > 0 ? "up" : changed < 0 ? "down" : "flat";
+  const confidentlyWrong = result.review.filter(
+    (r) => confidence[r.question.id] === "high",
+  ).length;
 
   return (
     <Card className="space-y-6">
@@ -323,6 +380,13 @@ function Results({
               ? "Question to review"
               : "Questions to review"}
           </h2>
+          {confidentlyWrong > 0 ? (
+            <p className="mt-1 text-sm text-status-low">
+              You were certain on {confidentlyWrong} of these — treat{" "}
+              {confidentlyWrong === 1 ? "it" : "them"} as a misconception to
+              fix, not a slip.
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-2">
             {result.review.map(({ question, chosenKey }) => (
               <li
@@ -333,6 +397,11 @@ function Results({
                 <div>
                   <p className="text-[15px] font-medium text-foreground">
                     {question.reviewLabel}
+                    {confidence[question.id] === "high" ? (
+                      <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-status-low">
+                        you were certain
+                      </span>
+                    ) : null}
                   </p>
                   <p className="mt-0.5 text-sm text-muted">
                     You answered {chosenKey || "—"} · correct answer was{" "}
