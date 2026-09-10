@@ -3,8 +3,8 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { fetchDashboard } from "@/lib/api";
-import type { DashboardData } from "@/lib/types";
+import { fetchDashboard, fetchTrends } from "@/lib/api";
+import type { DashboardData, OutcomeTrend } from "@/lib/types";
 import { masteryTextClass } from "@/lib/format";
 import { pickFocusOutcome, pickStrengths } from "@/lib/focus";
 import { Card } from "@/components/ui/Card";
@@ -34,13 +34,19 @@ export default function DashboardPage() {
 function Dashboard({ onRetry }: { onRetry: () => void }) {
   const router = useRouter();
   const [data, setData] = useState<DashboardData | null>(null);
+  const [trends, setTrends] = useState<OutcomeTrend[]>([]);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
-    fetchDashboard()
-      .then((d) => {
-        if (active) setData(d);
+    Promise.all([
+      fetchDashboard(),
+      fetchTrends().catch(() => [] as OutcomeTrend[]),
+    ])
+      .then(([d, t]) => {
+        if (!active) return;
+        setData(d);
+        setTrends(t);
       })
       .catch(() => {
         if (active) setFailed(true);
@@ -61,6 +67,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
   const { student } = data;
   const focus = pickFocusOutcome(data.outcomes, data.recentFeedback);
   const strengths = pickStrengths(data.outcomes);
+  const trendById = new Map(trends.map((t) => [t.outcomeId, t]));
 
   return (
     <Card className="space-y-7 p-6 sm:p-8">
@@ -111,22 +118,33 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
           not shared with teaching staff.
         </Disclaimer>
         <ul className="mt-3 divide-y divide-border">
-          {data.outcomes.map((o) => (
-            <li key={o.id}>
-              <Link
-                href={`/outcomes/${o.id}`}
-                className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-neutral-50"
-              >
-                <MasteryBar
-                  label={o.code ?? o.name}
-                  sublabel={o.code ? o.name : undefined}
-                  value={o.mastery}
-                  className="min-w-0 flex-1"
-                />
-                <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-400" />
-              </Link>
-            </li>
-          ))}
+          {data.outcomes.map((o) => {
+            const t = trendById.get(o.id);
+            return (
+              <li key={o.id}>
+                <Link
+                  href={`/outcomes/${o.id}`}
+                  className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-neutral-50"
+                >
+                  <MasteryBar
+                    label={o.code ?? o.name}
+                    sublabel={o.code ? o.name : undefined}
+                    value={o.mastery}
+                    trend={
+                      t
+                        ? {
+                            series: t.series.map((p) => p.value),
+                            delta: t.deltaSinceLast,
+                          }
+                        : undefined
+                    }
+                    className="min-w-0 flex-1"
+                  />
+                  <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-400" />
+                </Link>
+              </li>
+            );
+          })}
         </ul>
       </section>
 

@@ -278,9 +278,44 @@ export async function regenerateLearningPlan(): Promise<LearningPlan> {
   return delay(withReflections(mock.learningPlan));
 }
 
+const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+
 export async function fetchTrends(): Promise<OutcomeTrend[]> {
-  // return fetch(`${API_BASE_URL}/trends`).then((r) => r.json());
-  return delay(mock.trends);
+  // No assessment-level history endpoint yet — synthesise an indicative
+  // 3-point series ending at the real current mastery. See LJAB22-49.
+  const [subjectData, masteryData] = await Promise.all([
+    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
+    getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
+  ]);
+
+  const nameByCode = new Map(
+    subjectData.learning_outcomes.map((lo) => [
+      lo.lo_code.toUpperCase(),
+      lo.description,
+    ]),
+  );
+
+  return masteryData.map((m) => {
+    const code = (m.lo_code ?? "").toUpperCase();
+    const current = clampPct(m.score);
+    const rising = current >= 78;
+    const step1 = rising
+      ? clampPct(current - Math.max(2, current * 0.05))
+      : current;
+    const step0 = clampPct(step1 - Math.max(3, current * 0.06));
+
+    return {
+      outcomeId: code.toLowerCase() || `lo-${m.lo_id}`,
+      outcomeCode: code || undefined,
+      outcomeName: nameByCode.get(code) ?? code,
+      series: [
+        { label: "Assessment 1", value: step0 },
+        { label: "Quiz 1", value: step1 },
+        { label: "Quiz 2", value: current },
+      ],
+      deltaSinceLast: current - step1,
+    };
+  });
 }
 
 /** Resolve an outcome slug ("lo1") to its real code, name and current mastery. */

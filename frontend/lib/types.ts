@@ -76,6 +76,7 @@ export interface TrendPoint {
 
 export interface OutcomeTrend {
   outcomeId: string;
+  outcomeCode?: string;
   outcomeName: string;
   series: TrendPoint[];
   deltaSinceLast: number; // signed, percentage points

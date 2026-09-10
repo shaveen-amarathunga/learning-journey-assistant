@@ -8,6 +8,7 @@ import { formatDelta } from "@/lib/format";
 import { Card } from "@/components/ui/Card";
 import { BackHeader } from "@/components/BackHeader";
 import { Spinner } from "@/components/ui/PageState";
+import { Disclaimer } from "@/components/ui/Disclaimer";
 import { TrendingUpIcon } from "@/components/ui/icons";
 import { MasteryTrendChart } from "@/components/MasteryTrendChart";
 
@@ -35,7 +36,7 @@ export default function TrendsPage() {
     <div className="space-y-6">
       <BackHeader
         title="Progress trends"
-        subtitle="STM3LPP · across your assessments this semester"
+        subtitle="CSE3CAP · across your assessments this semester"
       />
 
       <Card className="space-y-4">
@@ -52,19 +53,25 @@ export default function TrendsPage() {
                   : "border-border text-muted hover:bg-neutral-50",
               )}
             >
-              {t.outcomeName}
+              {t.outcomeCode ?? t.outcomeName}
             </button>
           ))}
         </div>
 
         <div className="rounded-xl bg-neutral-50 p-4">
           <p className="text-[15px] font-medium text-foreground">
-            {active.outcomeName} mastery over time
+            {active.outcomeCode ? `${active.outcomeCode} · ` : ""}
+            {active.outcomeName}
           </p>
           <div className="mt-2">
             <MasteryTrendChart series={active.series} />
           </div>
         </div>
+
+        <Disclaimer>
+          Trend history is indicative until assessment-level history is
+          available.
+        </Disclaimer>
       </Card>
 
       <Card className="space-y-3">
@@ -77,7 +84,12 @@ export default function TrendsPage() {
               key={t.outcomeId}
               className="flex items-center justify-between py-3"
             >
-              <span className="text-[15px] text-foreground">{t.outcomeName}</span>
+              <span className="min-w-0 flex-1 truncate pr-3 text-[15px] text-foreground">
+                {t.outcomeCode ? (
+                  <span className="font-semibold">{t.outcomeCode} · </span>
+                ) : null}
+                {t.outcomeName}
+              </span>
               <span
                 className={cn(
                   "flex items-center gap-1.5 text-sm font-semibold",
