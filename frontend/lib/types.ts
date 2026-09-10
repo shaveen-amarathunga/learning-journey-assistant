@@ -60,6 +60,7 @@ export interface PlanStep {
   targetOutcomeName: string;
   status: PlanStepStatus;
   resultNote?: string; // e.g. "scored 4/5"
+  origin?: "reflection"; // added by the student from an outcome screen
 }
 
 export interface LearningPlan {

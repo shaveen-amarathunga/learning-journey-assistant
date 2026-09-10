@@ -128,7 +128,9 @@ function PlanRow({
           <span className="mt-0.5 block text-sm text-muted">
             {done
               ? `Completed${step.resultNote ? ` · ${step.resultNote}` : ""}`
-              : `Est. ${step.estMinutes} min · targets ${step.targetOutcomeName}`}
+              : step.origin === "reflection"
+                ? `Your note · targets ${step.targetOutcomeName}`
+                : `Est. ${step.estMinutes} min · targets ${step.targetOutcomeName}`}
           </span>
         </span>
       </button>

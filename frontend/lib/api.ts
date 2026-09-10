@@ -1,4 +1,5 @@
 import * as mock from "./mock-data";
+import { reflectionSteps } from "./reflections";
 import { deriveStrategies } from "./strategies";
 import type {
   DashboardData,
@@ -259,14 +260,22 @@ export async function fetchOutcomeDetail(
   };
 }
 
+/** Merge the student's saved reflections in as plan steps, newest first. */
+function withReflections(plan: LearningPlan): LearningPlan {
+  const steps = reflectionSteps();
+  return steps.length > 0
+    ? { ...plan, steps: [...steps, ...plan.steps] }
+    : plan;
+}
+
 export async function fetchLearningPlan(): Promise<LearningPlan> {
   // return fetch(`${API_BASE_URL}/learning-plan`).then((r) => r.json());
-  return delay(mock.learningPlan);
+  return delay(withReflections(mock.learningPlan));
 }
 
 export async function regenerateLearningPlan(): Promise<LearningPlan> {
   // return fetch(`${API_BASE_URL}/learning-plan/regenerate`, { method: "POST" }).then((r) => r.json());
-  return delay(mock.learningPlan);
+  return delay(withReflections(mock.learningPlan));
 }
 
 export async function fetchTrends(): Promise<OutcomeTrend[]> {

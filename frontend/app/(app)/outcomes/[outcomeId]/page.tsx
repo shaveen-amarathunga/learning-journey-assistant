@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { MasteryBadge } from "@/components/ui/Badge";
 import { BackHeader } from "@/components/BackHeader";
 import { StudyStrategies } from "@/components/StudyStrategies";
+import { ReflectionPrompt } from "@/components/ReflectionPrompt";
 import { Disclaimer } from "@/components/ui/Disclaimer";
 import { Spinner, EmptyState, ErrorState } from "@/components/ui/PageState";
 import {
@@ -136,6 +137,12 @@ function OutcomeDetailView({
 
         {/* Study strategies */}
         <StudyStrategies strategies={strategies} mastery={outcome.mastery} />
+
+        {/* Commit to a next step */}
+        <ReflectionPrompt
+          outcomeId={outcome.id}
+          outcomeLabel={outcome.code ?? outcome.name}
+        />
 
         {/* Recommended resources */}
         <section>
