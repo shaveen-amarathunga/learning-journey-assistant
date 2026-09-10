@@ -27,7 +27,7 @@ export function FocusPanel({
     .join(" · ");
 
   return (
-    <section className="rounded-xl border border-border bg-neutral-50 p-5">
+    <section className="border-b border-border pb-7">
       <p className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted">
         <TargetIcon className="h-4 w-4 text-brand" />
         Focus this week

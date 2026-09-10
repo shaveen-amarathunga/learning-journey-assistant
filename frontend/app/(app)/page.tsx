@@ -91,7 +91,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
       </header>
 
       <div className="space-y-6 lg:grid lg:grid-cols-5 lg:items-start lg:gap-6 lg:space-y-0">
-        {/* Left card */}
+        {/* Left card — priorities */}
         <Card className="min-w-0 space-y-7 lg:col-span-2">
           {/* Focus this week */}
           {focus ? (
@@ -104,7 +104,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
           ) : null}
 
           {/* Stat tiles */}
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <StatCard
               label="Overall mastery"
               value={`${data.overallMastery}%`}
@@ -118,7 +118,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
           <StrengthsPanel strengths={strengths} />
         </Card>
 
-        {/* Right card */}
+        {/* Right card — mastery & feedback */}
         <Card className="min-w-0 space-y-7 lg:col-span-3">
           {/* Mastery by learning outcome */}
           <section>
@@ -169,7 +169,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
                       <span className="block text-[15px] font-medium text-foreground">
                         {fb.comment}
                       </span>
-                      <span className="mt-0.5 block text-sm text-muted">
+                      <span className="mt-0.5 block break-words text-sm text-muted">
                         {fb.assignment} · {fb.outcomeName}
                       </span>
                     </span>
