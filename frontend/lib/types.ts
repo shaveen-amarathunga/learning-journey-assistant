@@ -96,12 +96,14 @@ export interface QuizQuestion {
 
 export interface Quiz {
   outcomeId: string;
+  outcomeCode?: string;
   outcomeName: string;
   questions: QuizQuestion[];
   masteryBefore: number;
 }
 
 export interface QuizResult {
+  outcomeCode?: string;
   outcomeName: string;
   correct: number;
   total: number;

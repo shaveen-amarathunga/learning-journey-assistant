@@ -270,26 +270,63 @@ export async function fetchTrends(): Promise<OutcomeTrend[]> {
   return delay(mock.trends);
 }
 
+/** Resolve an outcome slug ("lo1") to its real code, name and current mastery. */
+async function resolveOutcome(
+  outcomeId: string,
+): Promise<{ code: string; name: string; mastery: number } | null> {
+  const loCode = outcomeId.toUpperCase();
+  const [subjectData, masteryData] = await Promise.all([
+    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
+    getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
+  ]);
+  const lo = subjectData.learning_outcomes.find(
+    (item) => item.lo_code.toUpperCase() === loCode,
+  );
+  if (!lo) return null;
+  const score = masteryData.find(
+    (item) => (item.lo_code ?? "").toUpperCase() === loCode,
+  );
+  return {
+    code: lo.lo_code,
+    name: lo.description,
+    mastery: Math.round(score?.score ?? 0),
+  };
+}
+
+/** Signed mastery change for a quiz attempt (placeholder formative model). */
+function masteryDelta(correct: number, total: number): number {
+  const ratio = total > 0 ? correct / total : 0;
+  if (ratio >= 1) return 6;
+  if (ratio >= 0.8) return 4;
+  if (ratio >= 0.6) return 1;
+  if (ratio >= 0.4) return -2;
+  return -5;
+}
+
 export async function fetchQuiz(outcomeId: string): Promise<Quiz | null> {
-  // return fetch(`${API_BASE_URL}/quizzes?outcome=${outcomeId}`).then((r) => r.json());
-  return delay(mock.getQuiz(outcomeId) ?? null);
+  // No quiz-generation endpoint yet — placeholder questions, real outcome
+  // metadata. See LJAB22-49 (NLP / adaptive quiz generation).
+  const resolved = await resolveOutcome(outcomeId);
+  if (!resolved) return null;
+  return {
+    outcomeId,
+    outcomeCode: resolved.code,
+    outcomeName: resolved.name,
+    masteryBefore: resolved.mastery,
+    questions: mock.genericQuizQuestions,
+  };
 }
 
 export async function submitQuiz(
   outcomeId: string,
   answers: Record<string, string>,
 ): Promise<QuizResult> {
-  // return fetch(`${API_BASE_URL}/quizzes/${outcomeId}/submit`, {
-  //   method: "POST",
-  //   headers: { "Content-Type": "application/json" },
-  //   body: JSON.stringify({ answers }),
-  // }).then((r) => r.json());
+  const resolved = await resolveOutcome(outcomeId);
+  const questions = mock.genericQuizQuestions;
 
-  const quiz = mock.getQuiz(outcomeId)!;
   const wrong: { question: QuizQuestion; chosenKey: string }[] = [];
   let correct = 0;
-
-  for (const question of quiz.questions) {
+  for (const question of questions) {
     const chosenKey = answers[question.id] ?? "";
     if (chosenKey === question.correctKey) {
       correct += 1;
@@ -298,16 +335,19 @@ export async function submitQuiz(
     }
   }
 
-  const total = quiz.questions.length;
-  // Simple formative model: blend the prior mastery with this attempt's score.
-  const attemptPct = Math.round((correct / total) * 100);
-  const masteryAfter = Math.round(quiz.masteryBefore * 0.6 + attemptPct * 0.4);
+  const total = questions.length;
+  const masteryBefore = resolved?.mastery ?? 0;
+  const masteryAfter = Math.max(
+    0,
+    Math.min(100, masteryBefore + masteryDelta(correct, total)),
+  );
 
   return delay({
-    outcomeName: quiz.outcomeName,
+    outcomeCode: resolved?.code,
+    outcomeName: resolved?.name ?? "This outcome",
     correct,
     total,
-    masteryBefore: quiz.masteryBefore,
+    masteryBefore,
     masteryAfter,
     review: wrong,
   });

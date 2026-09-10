@@ -86,17 +86,29 @@ export default function QuizPage() {
   const progress =
     phase === "submitting" ? 100 : ((index + 1) / total) * 100;
 
+  const outcomeLabel = quiz!.outcomeCode
+    ? `${quiz!.outcomeCode} · ${quiz!.outcomeName}`
+    : quiz!.outcomeName;
+
   return (
     <Card className="space-y-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">
-          {quiz!.outcomeName} · Question {index + 1} of {total}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className="truncate text-[15px] font-medium text-foreground"
+            title={outcomeLabel}
+          >
+            {outcomeLabel}
+          </p>
+          <p className="mt-0.5 text-sm text-muted">
+            Question {index + 1} of {total}
+          </p>
+        </div>
         <button
           type="button"
           aria-label="Close quiz"
           onClick={() => router.push(`/outcomes/${outcomeId}`)}
-          className="rounded-lg p-1 text-muted hover:bg-neutral-100 hover:text-foreground"
+          className="shrink-0 rounded-lg p-1 text-muted hover:bg-neutral-100 hover:text-foreground"
         >
           <XIcon />
         </button>
@@ -160,6 +172,10 @@ export default function QuizPage() {
             ? "Submit answer"
             : "Finish quiz"}
       </Button>
+
+      <p className="text-center text-xs text-muted">
+        Sample questions — adaptive generation is coming.
+      </p>
     </Card>
   );
 }
@@ -171,6 +187,9 @@ function Results({
   result: QuizResult;
   onRetry: () => void;
 }) {
+  const changed = result.masteryAfter - result.masteryBefore;
+  const direction = changed > 0 ? "up" : changed < 0 ? "down" : "flat";
+
   return (
     <Card className="space-y-6">
       <div className="flex flex-col items-center text-center">
@@ -179,7 +198,8 @@ function Results({
           Quiz complete
         </h1>
         <p className="mt-1 text-sm text-muted">
-          {result.outcomeName} · {result.correct} of {result.total} correct
+          {result.outcomeCode ?? result.outcomeName} · {result.correct} of{" "}
+          {result.total} correct
         </p>
       </div>
 
@@ -187,9 +207,22 @@ function Results({
         <span className="text-[15px] font-medium text-foreground">
           Mastery updated
         </span>
-        <span className="flex items-center gap-1.5 text-sm font-semibold text-status-high">
+        <span
+          className={cn(
+            "flex items-center gap-1.5 text-sm font-semibold",
+            direction === "up"
+              ? "text-status-high"
+              : direction === "down"
+                ? "text-status-low"
+                : "text-muted",
+          )}
+        >
           {result.masteryBefore}% → {result.masteryAfter}%
-          <TrendingUpIcon className="h-4 w-4" />
+          {direction === "up" ? (
+            <TrendingUpIcon className="h-4 w-4" />
+          ) : direction === "down" ? (
+            <TrendingUpIcon className="h-4 w-4 -scale-y-100" />
+          ) : null}
         </span>
       </div>
 
