@@ -96,6 +96,19 @@ function outcomeSlug(loCode: string): string {
   return loCode.toLowerCase();
 }
 
+/** "Aisha Khan" -> "AK" */
+function initialsFor(name: string): string {
+  return (
+    name
+      .split(" ")
+      .map((part) => part[0])
+      .filter(Boolean)
+      .join("")
+      .slice(0, 2)
+      .toUpperCase() || "?"
+  );
+}
+
 function mapFeedback(
   raw: RawFeedback[],
   assessmentsById: Map<number, RawAssessment>,
@@ -120,8 +133,19 @@ function mapFeedback(
 // --- endpoints ---------------------------------------------------------------
 
 export async function fetchStudent(): Promise<Student> {
-  // return getJson<Student>(`/students/${DEMO_STUDENT_ID}`);
-  return delay(mock.student);
+  const [studentData, subjectData] = await Promise.all([
+    getJson<RawStudent>(`/students/${DEMO_STUDENT_ID}`),
+    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
+  ]);
+
+  return {
+    id: studentData.id,
+    name: studentData.name,
+    initials: initialsFor(studentData.name),
+    email: studentData.email,
+    subjectCode: subjectData.code,
+    subjectName: subjectData.name,
+  };
 }
 
 export async function fetchDashboard(): Promise<DashboardData> {
@@ -168,20 +192,11 @@ export async function fetchDashboard(): Promise<DashboardData> {
     outcomeNameByCode,
   );
 
-  const initials =
-    studentData.name
-      .split(" ")
-      .map((part) => part[0])
-      .filter(Boolean)
-      .join("")
-      .slice(0, 2)
-      .toUpperCase() || "?";
-
   return {
     student: {
       id: studentData.id,
       name: studentData.name,
-      initials,
+      initials: initialsFor(studentData.name),
       email: studentData.email,
       subjectCode: subjectData.code,
       subjectName: subjectData.name,
