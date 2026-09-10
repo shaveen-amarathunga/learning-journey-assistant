@@ -17,10 +17,10 @@ export function AppTopBar() {
   return (
     <header className="mb-8 border-b border-border bg-surface">
       <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
-        <div className="flex min-w-0 items-center gap-5">
+        <div className="flex min-w-0 items-center gap-4 sm:gap-6">
           <Link
             href="/"
-            className="shrink-0 text-sm font-semibold tracking-tight text-foreground"
+            className="hidden shrink-0 text-sm font-semibold tracking-tight text-foreground sm:block"
           >
             Learning Journey Assistant
           </Link>

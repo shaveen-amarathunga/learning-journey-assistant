@@ -17,9 +17,7 @@ import { Disclaimer } from "@/components/ui/Disclaimer";
 import {
   BellIcon,
   ChevronRightIcon,
-  ListChecksIcon,
   MessageSquareIcon,
-  TrendingUpIcon,
 } from "@/components/ui/icons";
 
 export default function DashboardPage() {
@@ -92,112 +90,96 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
         </button>
       </header>
 
-      {/* Focus this week */}
-      {focus ? (
-        <FocusPanel
-          focus={focus}
-          trendSeries={trendById
-            .get(focus.outcome.id)
-            ?.series.map((p) => p.value)}
-        />
-      ) : null}
+      <div className="lg:grid lg:grid-cols-5 lg:items-start lg:gap-8">
+        {/* Left column */}
+        <div className="space-y-7 lg:col-span-2">
+          {/* Focus this week */}
+          {focus ? (
+            <FocusPanel
+              focus={focus}
+              trendSeries={trendById
+                .get(focus.outcome.id)
+                ?.series.map((p) => p.value)}
+            />
+          ) : null}
 
-      {/* Stat tiles */}
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        <StatCard
-          label="Overall mastery"
-          value={`${data.overallMastery}%`}
-          accent={masteryTextClass(data.overallMastery)}
-        />
-        <StatCard label="Outcomes tracked" value={data.outcomesTracked} />
-        <StatCard label="Quizzes completed" value={data.quizzesCompleted} />
+          {/* Stat tiles */}
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3 lg:grid-cols-1">
+            <StatCard
+              label="Overall mastery"
+              value={`${data.overallMastery}%`}
+              accent={masteryTextClass(data.overallMastery)}
+            />
+            <StatCard label="Outcomes tracked" value={data.outcomesTracked} />
+            <StatCard label="Quizzes completed" value={data.quizzesCompleted} />
+          </div>
+
+          {/* Your strengths */}
+          <StrengthsPanel strengths={strengths} />
+        </div>
+
+        {/* Right column */}
+        <div className="mt-7 space-y-7 lg:col-span-3 lg:mt-0">
+          {/* Mastery by learning outcome */}
+          <section>
+            <h2 className="text-sm font-medium text-muted">
+              Mastery by learning outcome
+            </h2>
+            <Disclaimer className="mt-2">
+              Formative estimates from your marked work — not official grades,
+              and not shared with teaching staff.
+            </Disclaimer>
+            <ul className="mt-3 divide-y divide-border">
+              {data.outcomes.map((o) => {
+                const t = trendById.get(o.id);
+                return (
+                  <li key={o.id}>
+                    <Link
+                      href={`/outcomes/${o.id}`}
+                      className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-neutral-50"
+                    >
+                      <MasteryBar
+                        label={o.code ?? o.name}
+                        sublabel={o.code ? o.name : undefined}
+                        value={o.mastery}
+                        delta={t?.deltaSinceLast}
+                        className="min-w-0 flex-1"
+                      />
+                      <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-400" />
+                    </Link>
+                  </li>
+                );
+              })}
+            </ul>
+          </section>
+
+          {/* Recent feedback */}
+          <section>
+            <h2 className="text-sm font-medium text-muted">Recent feedback</h2>
+            <ul className="mt-3 space-y-2">
+              {data.recentFeedback.map((fb) => (
+                <li key={fb.id}>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/outcomes/${fb.outcomeId}`)}
+                    className="flex w-full items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-left hover:bg-neutral-50"
+                  >
+                    <MessageSquareIcon className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
+                    <span>
+                      <span className="block text-[15px] font-medium text-foreground">
+                        {fb.comment}
+                      </span>
+                      <span className="mt-0.5 block text-sm text-muted">
+                        {fb.assignment} · {fb.outcomeName}
+                      </span>
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </section>
+        </div>
       </div>
-
-      {/* Your strengths */}
-      <StrengthsPanel strengths={strengths} />
-
-      {/* Mastery by learning outcome */}
-      <section>
-        <h2 className="text-sm font-medium text-muted">
-          Mastery by learning outcome
-        </h2>
-        <Disclaimer className="mt-2">
-          Formative estimates from your marked work — not official grades, and
-          not shared with teaching staff.
-        </Disclaimer>
-        <ul className="mt-3 divide-y divide-border">
-          {data.outcomes.map((o) => {
-            const t = trendById.get(o.id);
-            return (
-              <li key={o.id}>
-                <Link
-                  href={`/outcomes/${o.id}`}
-                  className="-mx-2 flex items-center gap-3 rounded-lg px-2 py-3 hover:bg-neutral-50"
-                >
-                  <MasteryBar
-                    label={o.code ?? o.name}
-                    sublabel={o.code ? o.name : undefined}
-                    value={o.mastery}
-                    delta={t?.deltaSinceLast}
-                    className="min-w-0 flex-1"
-                  />
-                  <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-400" />
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
-      {/* Recent feedback */}
-      <section>
-        <h2 className="text-sm font-medium text-muted">Recent feedback</h2>
-        <ul className="mt-3 space-y-2">
-          {data.recentFeedback.map((fb) => (
-            <li key={fb.id}>
-              <button
-                type="button"
-                onClick={() => router.push(`/outcomes/${fb.outcomeId}`)}
-                className="flex w-full items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-left hover:bg-neutral-50"
-              >
-                <MessageSquareIcon className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
-                <span>
-                  <span className="block text-[15px] font-medium text-foreground">
-                    {fb.comment}
-                  </span>
-                  <span className="mt-0.5 block text-sm text-muted">
-                    {fb.assignment} · {fb.outcomeName}
-                  </span>
-                </span>
-              </button>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Entry points to the rest of the journey */}
-      <section className="grid grid-cols-1 gap-3 border-t border-border pt-6 sm:grid-cols-2">
-        <Link
-          href="/plan"
-          className="flex items-center justify-between rounded-xl border border-border px-4 py-3 hover:bg-neutral-50"
-        >
-          <span className="flex items-center gap-2.5 text-[15px] font-medium text-foreground">
-            <ListChecksIcon className="h-5 w-5 text-neutral-500" />
-            Your learning plan
-          </span>
-          <ChevronRightIcon className="h-4 w-4 text-neutral-400" />
-        </Link>
-        <Link
-          href="/trends"
-          className="flex items-center justify-between rounded-xl border border-border px-4 py-3 hover:bg-neutral-50"
-        >
-          <span className="flex items-center gap-2.5 text-[15px] font-medium text-foreground">
-            <TrendingUpIcon className="h-5 w-5 text-neutral-500" />
-            Progress trends
-          </span>
-          <ChevronRightIcon className="h-4 w-4 text-neutral-400" />
-        </Link>
-      </section>
     </Card>
   );
 }
