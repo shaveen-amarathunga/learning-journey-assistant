@@ -321,6 +321,7 @@ async function buildLearningPlan(): Promise<LearningPlan> {
       estMinutes: 10,
       targetOutcomeName: code,
       status: "todo",
+      href: `/quiz/${code.toLowerCase()}`,
     });
   }
 

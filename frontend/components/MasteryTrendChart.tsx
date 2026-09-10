@@ -16,19 +16,21 @@ import type { TrendPoint } from "@/lib/types";
  * line and the assessment labels underneath.
  */
 export function MasteryTrendChart({ series }: { series: TrendPoint[] }) {
-  const data = series.map((p) => ({ ...p, tick: `${p.label} · ${p.value}%` }));
-
   return (
     <div className="h-44 w-full">
       <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 12, right: 16, bottom: 4, left: 16 }}>
+        <LineChart
+          data={series}
+          margin={{ top: 12, right: 8, bottom: 4, left: 8 }}
+        >
           <YAxis hide domain={[0, 100]} />
           <XAxis
-            dataKey="tick"
+            dataKey="label"
             tickLine={false}
             axisLine={false}
             tick={{ fill: "var(--muted)", fontSize: 12 }}
-            interval="preserveStartEnd"
+            interval={0}
+            padding={{ left: 32, right: 32 }}
             height={20}
           />
           <Tooltip

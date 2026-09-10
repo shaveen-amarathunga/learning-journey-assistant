@@ -29,3 +29,12 @@ export function formatDelta(delta: number): string {
   if (delta === 0) return "0%";
   return `${delta > 0 ? "+" : ""}${delta}%`;
 }
+
+/** Short text label for a mastery band — a non-colour cue for the bars. */
+export function masteryLabel(mastery: number): string {
+  return {
+    low: "needs work",
+    mid: "developing",
+    high: "on track",
+  }[masteryStatus(mastery)];
+}

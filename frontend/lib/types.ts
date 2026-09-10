@@ -61,6 +61,7 @@ export interface PlanStep {
   status: PlanStepStatus;
   resultNote?: string; // e.g. "scored 4/5"
   origin?: "reflection"; // added by the student from an outcome screen
+  href?: string; // if the step opens somewhere, e.g. a practice quiz
 }
 
 export interface LearningPlan {

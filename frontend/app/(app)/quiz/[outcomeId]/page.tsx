@@ -175,7 +175,7 @@ export default function QuizPage() {
               <label
                 key={opt.key}
                 className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-[15px] transition-colors",
+                  "flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-[15px] transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand",
                   active
                     ? "border-blue-500 bg-blue-50 text-foreground"
                     : "border-border hover:bg-neutral-50",

@@ -14,11 +14,7 @@ import { Spinner, ErrorState } from "@/components/ui/PageState";
 import { FocusPanel } from "@/components/FocusPanel";
 import { StrengthsPanel } from "@/components/StrengthsPanel";
 import { Disclaimer } from "@/components/ui/Disclaimer";
-import {
-  BellIcon,
-  ChevronRightIcon,
-  MessageSquareIcon,
-} from "@/components/ui/icons";
+import { ChevronRightIcon, MessageSquareIcon } from "@/components/ui/icons";
 
 export default function DashboardPage() {
   // Remount on retry so the loading/error state resets cleanly.
@@ -69,25 +65,16 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
   return (
     <div className="space-y-6">
       {/* Profile header */}
-      <header className="flex items-start justify-between gap-4 px-1">
-        <div className="flex items-center gap-3">
-          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
-            {student.initials}
-          </span>
-          <div>
-            <p className="font-semibold text-foreground">{student.name}</p>
-            <p className="text-sm text-muted">
-              {student.subjectCode} · {student.subjectName}
-            </p>
-          </div>
+      <header className="flex items-center gap-3 px-1">
+        <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+          {student.initials}
+        </span>
+        <div>
+          <p className="font-semibold text-foreground">{student.name}</p>
+          <p className="text-sm text-muted">
+            {student.subjectCode} · {student.subjectName}
+          </p>
         </div>
-        <button
-          type="button"
-          aria-label="Notifications"
-          className="rounded-lg p-1.5 text-muted hover:bg-neutral-100 hover:text-foreground"
-        >
-          <BellIcon />
-        </button>
       </header>
 
       <div className="space-y-6 lg:grid lg:grid-cols-5 lg:gap-6 lg:space-y-0">

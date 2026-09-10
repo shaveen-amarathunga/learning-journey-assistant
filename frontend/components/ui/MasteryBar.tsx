@@ -1,4 +1,4 @@
-import { masteryColor, masteryTextClass } from "@/lib/format";
+import { masteryColor, masteryLabel, masteryTextClass } from "@/lib/format";
 import { cn } from "@/lib/cn";
 
 /**
@@ -32,6 +32,14 @@ export function MasteryBar({
         </div>
         <div className="flex shrink-0 items-baseline gap-2">
           <span
+            className={cn(
+              "hidden text-xs font-medium sm:inline",
+              masteryTextClass(value),
+            )}
+          >
+            {masteryLabel(value)}
+          </span>
+          <span
             className={cn("text-sm font-semibold", masteryTextClass(value))}
           >
             {value}%
@@ -49,7 +57,7 @@ export function MasteryBar({
         aria-valuenow={value}
         aria-valuemin={0}
         aria-valuemax={100}
-        aria-label={`${sublabel ?? label} mastery`}
+        aria-label={`${sublabel ?? label} mastery — ${masteryLabel(value)}`}
       >
         <div
           className="h-full rounded-full transition-[width] duration-500"

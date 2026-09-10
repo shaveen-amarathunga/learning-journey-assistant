@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { cn } from "@/lib/cn";
-import { masteryStatus } from "@/lib/format";
+import { masteryLabel, masteryStatus } from "@/lib/format";
 
 const tones = {
   low: "bg-red-50 text-status-low",
@@ -32,5 +32,9 @@ export function Badge({
 }
 
 export function MasteryBadge({ value }: { value: number }) {
-  return <Badge tone={masteryStatus(value)}>{value}% mastery</Badge>;
+  return (
+    <Badge tone={masteryStatus(value)}>
+      {value}% · {masteryLabel(value)}
+    </Badge>
+  );
 }
