@@ -15,7 +15,7 @@ import {
   XIcon,
 } from "@/components/ui/icons";
 
-type Phase = "loading" | "quiz" | "submitting" | "results";
+type Phase = "loading" | "quiz" | "predict" | "submitting" | "results";
 
 export default function QuizPage() {
   const router = useRouter();
@@ -26,6 +26,7 @@ export default function QuizPage() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [predicted, setPredicted] = useState<number | null>(null);
   const [result, setResult] = useState<QuizResult | null>(null);
 
   useEffect(() => {
@@ -60,12 +61,17 @@ export default function QuizPage() {
     setAnswers((prev) => ({ ...prev, [question.id]: key }));
   }
 
-  async function next() {
+  function next() {
     if (!selected) return;
     if (index < total - 1) {
       setIndex(index + 1);
       return;
     }
+    setPhase("predict");
+  }
+
+  async function confirmPrediction(value: number) {
+    setPredicted(value);
     setPhase("submitting");
     const r = await submitQuiz(outcomeId, answers);
     setResult(r);
@@ -75,16 +81,26 @@ export default function QuizPage() {
   function retry() {
     setAnswers({});
     setIndex(0);
+    setPredicted(null);
     setResult(null);
     setPhase("quiz");
   }
 
-  if (phase === "results" && result) {
-    return <Results result={result} onRetry={retry} />;
+  if (phase === "predict" || phase === "submitting") {
+    return (
+      <Predict
+        total={total}
+        busy={phase === "submitting"}
+        onConfirm={confirmPrediction}
+      />
+    );
   }
 
-  const progress =
-    phase === "submitting" ? 100 : ((index + 1) / total) * 100;
+  if (phase === "results" && result) {
+    return <Results result={result} predicted={predicted} onRetry={retry} />;
+  }
+
+  const progress = ((index + 1) / total) * 100;
 
   const outcomeLabel = quiz!.outcomeCode
     ? `${quiz!.outcomeCode} · ${quiz!.outcomeName}`
@@ -160,17 +176,8 @@ export default function QuizPage() {
         </div>
       </fieldset>
 
-      <Button
-        size="lg"
-        fullWidth
-        onClick={next}
-        disabled={!selected || phase === "submitting"}
-      >
-        {phase === "submitting"
-          ? "Scoring…"
-          : index < total - 1
-            ? "Submit answer"
-            : "Finish quiz"}
+      <Button size="lg" fullWidth onClick={next} disabled={!selected}>
+        {index < total - 1 ? "Submit answer" : "Finish quiz"}
       </Button>
 
       <p className="text-center text-xs text-muted">
@@ -180,11 +187,78 @@ export default function QuizPage() {
   );
 }
 
+function Predict({
+  total,
+  busy,
+  onConfirm,
+}: {
+  total: number;
+  busy: boolean;
+  onConfirm: (value: number) => void;
+}) {
+  const [pick, setPick] = useState<number | null>(null);
+
+  return (
+    <Card className="space-y-5">
+      <div className="text-center">
+        <h1 className="text-lg font-semibold text-foreground">
+          Before you see your results
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          How many of the {total} do you think you got right?
+        </p>
+      </div>
+
+      <div className="flex justify-center gap-2">
+        {Array.from({ length: total + 1 }, (_, n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setPick(n)}
+            aria-pressed={pick === n}
+            className={cn(
+              "h-11 w-11 rounded-xl border text-[15px] font-semibold transition-colors",
+              pick === n
+                ? "border-blue-500 bg-blue-50 text-foreground"
+                : "border-border text-muted hover:bg-neutral-50",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+
+      <Button
+        size="lg"
+        fullWidth
+        disabled={pick === null || busy}
+        onClick={() => pick !== null && onConfirm(pick)}
+      >
+        {busy ? "Scoring…" : "See results"}
+      </Button>
+
+      <p className="text-center text-xs text-muted">
+        Predicting first sharpens how well you judge your own understanding.
+      </p>
+    </Card>
+  );
+}
+
+function calibrationNote(predicted: number, actual: number): string {
+  const diff = actual - predicted;
+  if (diff === 0) return "Bang on — good read of your own understanding.";
+  if (diff > 0)
+    return `Better than you predicted by ${diff}. Trust your preparation a little more.`;
+  return `A bit optimistic by ${-diff}. Look closely at the ones you felt sure about.`;
+}
+
 function Results({
   result,
+  predicted,
   onRetry,
 }: {
   result: QuizResult;
+  predicted: number | null;
   onRetry: () => void;
 }) {
   const changed = result.masteryAfter - result.masteryBefore;
@@ -202,6 +276,22 @@ function Results({
           {result.total} correct
         </p>
       </div>
+
+      {predicted !== null ? (
+        <div className="rounded-xl bg-neutral-50 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[15px] font-medium text-foreground">
+              Your prediction
+            </span>
+            <span className="text-sm text-muted">
+              predicted {predicted} · got {result.correct}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            {calibrationNote(predicted, result.correct)}
+          </p>
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
         <span className="text-[15px] font-medium text-foreground">
