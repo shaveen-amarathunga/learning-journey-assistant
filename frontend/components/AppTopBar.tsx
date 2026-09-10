@@ -15,36 +15,38 @@ export function AppTopBar() {
   const pathname = usePathname();
 
   return (
-    <header className="mb-6 flex items-center justify-between gap-4 border-b border-border pb-3">
-      <div className="flex min-w-0 items-center gap-5">
-        <Link
-          href="/"
-          className="shrink-0 text-sm font-semibold tracking-tight text-foreground"
-        >
-          Learning Journey Assistant
-        </Link>
-        <nav className="flex items-center gap-4 text-sm">
-          {NAV.map(({ href, label }) => {
-            const active =
-              href === "/" ? pathname === "/" : pathname.startsWith(href);
-            return (
-              <Link
-                key={href}
-                href={href}
-                className={cn(
-                  "transition-colors",
-                  active
-                    ? "font-medium text-foreground"
-                    : "text-muted hover:text-foreground",
-                )}
-              >
-                {label}
-              </Link>
-            );
-          })}
-        </nav>
+    <header className="mb-8 border-b border-border bg-surface">
+      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+        <div className="flex min-w-0 items-center gap-5">
+          <Link
+            href="/"
+            className="shrink-0 text-sm font-semibold tracking-tight text-foreground"
+          >
+            Learning Journey Assistant
+          </Link>
+          <nav className="flex items-center gap-4 text-sm">
+            {NAV.map(({ href, label }) => {
+              const active =
+                href === "/" ? pathname === "/" : pathname.startsWith(href);
+              return (
+                <Link
+                  key={href}
+                  href={href}
+                  className={cn(
+                    "transition-colors",
+                    active
+                      ? "font-medium text-foreground"
+                      : "text-muted hover:text-foreground",
+                  )}
+                >
+                  {label}
+                </Link>
+              );
+            })}
+          </nav>
+        </div>
+        <AccountMenu size="sm" />
       </div>
-      <AccountMenu size="sm" />
     </header>
   );
 }

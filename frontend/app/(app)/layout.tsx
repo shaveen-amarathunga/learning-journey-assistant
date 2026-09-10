@@ -23,18 +23,20 @@ export default function AppLayout({
     }
   }, [hydrated, signedIn, router]);
 
-  const show = hydrated && signedIn;
+  if (!(hydrated && signedIn)) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-5 pt-16 sm:px-8">
+        <Spinner label="Loading your journey" />
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-5 pb-20 pt-6 sm:px-6">
-      {show ? (
-        <>
-          <AppTopBar />
-          {children}
-        </>
-      ) : (
-        <Spinner label="Loading your journey" />
-      )}
-    </div>
+    <>
+      <AppTopBar />
+      <main className="mx-auto w-full max-w-5xl px-5 pb-24 sm:px-8">
+        {children}
+      </main>
+    </>
   );
 }
