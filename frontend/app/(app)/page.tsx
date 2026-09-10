@@ -92,7 +92,14 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
       </header>
 
       {/* Focus this week */}
-      {focus ? <FocusPanel focus={focus} /> : null}
+      {focus ? (
+        <FocusPanel
+          focus={focus}
+          trendSeries={trendById
+            .get(focus.outcome.id)
+            ?.series.map((p) => p.value)}
+        />
+      ) : null}
 
       {/* Stat tiles */}
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -130,14 +137,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
                     label={o.code ?? o.name}
                     sublabel={o.code ? o.name : undefined}
                     value={o.mastery}
-                    trend={
-                      t
-                        ? {
-                            series: t.series.map((p) => p.value),
-                            delta: t.deltaSinceLast,
-                          }
-                        : undefined
-                    }
+                    delta={t?.deltaSinceLast}
                     className="min-w-0 flex-1"
                   />
                   <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-400" />

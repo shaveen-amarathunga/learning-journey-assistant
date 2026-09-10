@@ -1,23 +1,22 @@
 import { masteryColor, masteryTextClass } from "@/lib/format";
 import { cn } from "@/lib/cn";
-import { Sparkline } from "@/components/ui/Sparkline";
 
 /**
  * A labelled mastery row: a short label (e.g. "LO1"), an optional longer
- * description, an optional sparkline + delta, a colour-coded track, and the
+ * description, an optional "+N%" delta, a colour-coded track, and the
  * percentage. Used on the dashboard's "Mastery by learning outcome" list.
  */
 export function MasteryBar({
   label,
   sublabel,
   value,
-  trend,
+  delta,
   className,
 }: {
   label: string;
   sublabel?: string;
   value: number;
-  trend?: { series: number[]; delta: number };
+  delta?: number;
   className?: string;
 }) {
   return (
@@ -31,24 +30,15 @@ export function MasteryBar({
             <span className="truncate text-sm text-muted">{sublabel}</span>
           ) : null}
         </div>
-        <div className="flex shrink-0 items-center gap-2">
-          {trend ? (
-            <Sparkline
-              points={trend.series}
-              className="hidden h-4 w-14 sm:block"
-            />
-          ) : null}
+        <div className="flex shrink-0 items-baseline gap-2">
           <span
-            className={cn(
-              "text-sm font-semibold",
-              masteryTextClass(value),
-            )}
+            className={cn("text-sm font-semibold", masteryTextClass(value))}
           >
             {value}%
           </span>
-          {trend && trend.delta > 0 ? (
+          {delta !== undefined && delta > 0 ? (
             <span className="text-xs font-medium text-status-high">
-              +{trend.delta}%
+              +{delta}%
             </span>
           ) : null}
         </div>

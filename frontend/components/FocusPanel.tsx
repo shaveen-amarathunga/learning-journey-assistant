@@ -1,4 +1,5 @@
 import { ButtonLink } from "@/components/ui/Button";
+import { Sparkline } from "@/components/ui/Sparkline";
 import { TargetIcon } from "@/components/ui/icons";
 import { masteryTextClass } from "@/lib/format";
 import type { FocusOutcome } from "@/lib/focus";
@@ -7,7 +8,13 @@ import type { FocusOutcome } from "@/lib/focus";
  * "Focus this week" — the one outcome the student should act on next.
  * Sits at the top of the dashboard, above the status tiles.
  */
-export function FocusPanel({ focus }: { focus: FocusOutcome }) {
+export function FocusPanel({
+  focus,
+  trendSeries,
+}: {
+  focus: FocusOutcome;
+  trendSeries?: number[];
+}) {
   const { outcome, recentComment, commentCount, isLowest } = focus;
 
   const context = [
@@ -37,6 +44,13 @@ export function FocusPanel({ focus }: { focus: FocusOutcome }) {
         </span>{" "}
         · {context}
       </p>
+
+      {trendSeries && trendSeries.length >= 2 ? (
+        <div className="mt-3">
+          <Sparkline points={trendSeries} className="h-8 w-24" />
+          <p className="mt-1 text-xs text-muted">recent trajectory</p>
+        </div>
+      ) : null}
 
       {recentComment ? (
         <blockquote className="mt-3 border-l-2 border-border pl-3 text-sm text-muted">
