@@ -14,6 +14,7 @@ import { Spinner, ErrorState } from "@/components/ui/PageState";
 import { AccountMenu } from "@/components/AccountMenu";
 import { FocusPanel } from "@/components/FocusPanel";
 import { StrengthsPanel } from "@/components/StrengthsPanel";
+import { Disclaimer } from "@/components/ui/Disclaimer";
 import {
   BellIcon,
   ChevronRightIcon,
@@ -105,6 +106,10 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
         <h2 className="text-sm font-medium text-muted">
           Mastery by learning outcome
         </h2>
+        <Disclaimer className="mt-2">
+          Formative estimates from your marked work — not official grades, and
+          not shared with teaching staff.
+        </Disclaimer>
         <ul className="mt-3 divide-y divide-border">
           {data.outcomes.map((o) => (
             <li key={o.id}>

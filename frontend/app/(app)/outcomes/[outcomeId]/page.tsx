@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { MasteryBadge } from "@/components/ui/Badge";
 import { BackHeader } from "@/components/BackHeader";
 import { StudyStrategies } from "@/components/StudyStrategies";
+import { Disclaimer } from "@/components/ui/Disclaimer";
 import { Spinner, EmptyState, ErrorState } from "@/components/ui/PageState";
 import {
   FileTextIcon,
@@ -82,6 +83,15 @@ function OutcomeDetailView({
   }
 
   const { outcome, subjectCode, reasons, strategies, resources } = detail;
+  const assessmentCount = new Set(reasons.map((r) => r.assignment)).size;
+  const provenance =
+    reasons.length > 0
+      ? `This ${outcome.mastery}% is a formative estimate from ${reasons.length} rubric comment${
+          reasons.length > 1 ? "s" : ""
+        } across ${assessmentCount} assessment${
+          assessmentCount > 1 ? "s" : ""
+        } — not an official grade.`
+      : `No marked work is linked to this outcome yet — this is a starting estimate, not an official grade.`;
 
   return (
     <div className="space-y-6">
@@ -94,6 +104,8 @@ function OutcomeDetailView({
       />
 
       <Card className="space-y-7">
+        <Disclaimer>{provenance}</Disclaimer>
+
         {/* Why this score */}
         <section>
           <h2 className="text-sm font-medium text-muted">Why this score</h2>
