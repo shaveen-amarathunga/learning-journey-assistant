@@ -53,7 +53,7 @@ export function FocusPanel({
       ) : null}
 
       {recentComment ? (
-        <blockquote className="mt-3 border-l-2 border-border pl-3 text-sm text-muted">
+        <blockquote className="mt-3 break-words border-l-2 border-border pl-3 text-sm text-muted">
           “{recentComment.comment}”
           <span className="mt-0.5 block text-xs">
             {recentComment.assignment}

@@ -67,9 +67,9 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
   const trendById = new Map(trends.map((t) => [t.outcomeId, t]));
 
   return (
-    <Card className="space-y-7 p-6 sm:p-8">
+    <div className="space-y-6">
       {/* Profile header */}
-      <header className="flex items-start justify-between gap-4">
+      <header className="flex items-start justify-between gap-4 px-1">
         <div className="flex items-center gap-3">
           <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
             {student.initials}
@@ -90,9 +90,9 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
         </button>
       </header>
 
-      <div className="lg:grid lg:grid-cols-5 lg:items-start lg:gap-8">
-        {/* Left column */}
-        <div className="space-y-7 lg:col-span-2">
+      <div className="space-y-6 lg:grid lg:grid-cols-5 lg:items-start lg:gap-6 lg:space-y-0">
+        {/* Left card */}
+        <Card className="min-w-0 space-y-7 lg:col-span-2">
           {/* Focus this week */}
           {focus ? (
             <FocusPanel
@@ -116,10 +116,10 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
 
           {/* Your strengths */}
           <StrengthsPanel strengths={strengths} />
-        </div>
+        </Card>
 
-        {/* Right column */}
-        <div className="mt-7 space-y-7 lg:col-span-3 lg:mt-0">
+        {/* Right card */}
+        <Card className="min-w-0 space-y-7 lg:col-span-3">
           {/* Mastery by learning outcome */}
           <section>
             <h2 className="text-sm font-medium text-muted">
@@ -178,8 +178,8 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
               ))}
             </ul>
           </section>
-        </div>
+        </Card>
       </div>
-    </Card>
+    </div>
   );
 }
