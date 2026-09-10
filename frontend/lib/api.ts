@@ -8,6 +8,7 @@ import type {
   LearningPlan,
   OutcomeDetail,
   OutcomeTrend,
+  PlanStep,
   Quiz,
   QuizQuestion,
   QuizResult,
@@ -268,14 +269,74 @@ function withReflections(plan: LearningPlan): LearningPlan {
     : plan;
 }
 
+/**
+ * Build a learning plan from the student's two weakest outcomes: the top
+ * study strategy for each (its concrete action) plus a targeted quiz.
+ * No plan-generation endpoint yet — see LJAB22-49.
+ */
+async function buildLearningPlan(): Promise<LearningPlan> {
+  const [subjectData, masteryData, feedbackData] = await Promise.all([
+    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
+    getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
+    getJson<RawFeedback[]>(`/students/${DEMO_STUDENT_ID}/feedback`),
+  ]);
+
+  const nameByCode = new Map(
+    subjectData.learning_outcomes.map((lo) => [
+      lo.lo_code.toUpperCase(),
+      lo.description,
+    ]),
+  );
+  const assessmentsById = new Map(
+    subjectData.assessments.map((a) => [a.id, a]),
+  );
+
+  const weakest = [...masteryData]
+    .sort((a, b) => a.score - b.score)
+    .slice(0, 2);
+
+  const steps: PlanStep[] = [];
+  for (const m of weakest) {
+    const code = (m.lo_code ?? "").toUpperCase() || "this outcome";
+    const reasons = mapFeedback(
+      feedbackData.filter(
+        (f) => (f.lo_code ?? "").toUpperCase() === code,
+      ),
+      assessmentsById,
+      nameByCode,
+    );
+    const [topStrategy] = deriveStrategies(reasons);
+    if (topStrategy) {
+      steps.push({
+        id: `plan-${code}-strategy`,
+        title: topStrategy.how,
+        estMinutes: 25,
+        targetOutcomeName: code,
+        status: "todo",
+      });
+    }
+    steps.push({
+      id: `plan-${code}-quiz`,
+      title: `Complete a practice quiz — ${code}`,
+      estMinutes: 10,
+      targetOutcomeName: code,
+      status: "todo",
+    });
+  }
+
+  return withReflections({
+    subjectCode: subjectData.code,
+    generatedFrom: "generated from your weakest outcomes",
+    steps,
+  });
+}
+
 export async function fetchLearningPlan(): Promise<LearningPlan> {
-  // return fetch(`${API_BASE_URL}/learning-plan`).then((r) => r.json());
-  return delay(withReflections(mock.learningPlan));
+  return buildLearningPlan();
 }
 
 export async function regenerateLearningPlan(): Promise<LearningPlan> {
-  // return fetch(`${API_BASE_URL}/learning-plan/regenerate`, { method: "POST" }).then((r) => r.json());
-  return delay(withReflections(mock.learningPlan));
+  return buildLearningPlan();
 }
 
 const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
