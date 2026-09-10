@@ -6,13 +6,14 @@ import { useRouter } from "next/navigation";
 import { fetchDashboard } from "@/lib/api";
 import type { DashboardData } from "@/lib/types";
 import { masteryTextClass } from "@/lib/format";
-import { pickFocusOutcome } from "@/lib/focus";
+import { pickFocusOutcome, pickStrengths } from "@/lib/focus";
 import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { MasteryBar } from "@/components/ui/MasteryBar";
 import { Spinner, ErrorState } from "@/components/ui/PageState";
 import { AccountMenu } from "@/components/AccountMenu";
 import { FocusPanel } from "@/components/FocusPanel";
+import { StrengthsPanel } from "@/components/StrengthsPanel";
 import {
   BellIcon,
   ChevronRightIcon,
@@ -58,6 +59,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
 
   const { student } = data;
   const focus = pickFocusOutcome(data.outcomes, data.recentFeedback);
+  const strengths = pickStrengths(data.outcomes);
 
   return (
     <Card className="space-y-7 p-6 sm:p-8">
@@ -94,6 +96,9 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
         <StatCard label="Outcomes tracked" value={data.outcomesTracked} />
         <StatCard label="Quizzes completed" value={data.quizzesCompleted} />
       </div>
+
+      {/* Your strengths */}
+      <StrengthsPanel strengths={strengths} />
 
       {/* Mastery by learning outcome */}
       <section>

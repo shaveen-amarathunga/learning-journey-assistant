@@ -1,3 +1,4 @@
+import { masteryStatus } from "./format";
 import type { FeedbackItem, LearningOutcome } from "./types";
 
 export interface FocusOutcome {
@@ -40,4 +41,18 @@ export function pickFocusOutcome(
     recentComment: recentFeedback.find((f) => f.outcomeId === focus.id),
     isLowest: focus.mastery === lowestMastery,
   };
+}
+
+/**
+ * The student's strongest outcomes — those in the "high" mastery band,
+ * best first. Balances the deficit framing of the focus panel.
+ */
+export function pickStrengths(
+  outcomes: LearningOutcome[],
+  limit = 2,
+): LearningOutcome[] {
+  return [...outcomes]
+    .filter((o) => masteryStatus(o.mastery) === "high")
+    .sort((a, b) => b.mastery - a.mastery)
+    .slice(0, limit);
 }
