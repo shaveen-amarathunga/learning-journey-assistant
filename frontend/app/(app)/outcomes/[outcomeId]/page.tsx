@@ -8,6 +8,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { MasteryBadge } from "@/components/ui/Badge";
 import { BackHeader } from "@/components/BackHeader";
+import { StudyStrategies } from "@/components/StudyStrategies";
 import { Spinner, EmptyState, ErrorState } from "@/components/ui/PageState";
 import {
   FileTextIcon,
@@ -80,7 +81,7 @@ function OutcomeDetailView({
     );
   }
 
-  const { outcome, subjectCode, reasons, resources } = detail;
+  const { outcome, subjectCode, reasons, strategies, resources } = detail;
 
   return (
     <div className="space-y-6">
@@ -120,6 +121,9 @@ function OutcomeDetailView({
             ))}
           </ul>
         </section>
+
+        {/* Study strategies */}
+        <StudyStrategies strategies={strategies} mastery={outcome.mastery} />
 
         {/* Recommended resources */}
         <section>

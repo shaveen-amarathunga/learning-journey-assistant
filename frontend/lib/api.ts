@@ -1,4 +1,5 @@
 import * as mock from "./mock-data";
+import { deriveStrategies } from "./strategies";
 import type {
   DashboardData,
   FeedbackItem,
@@ -241,6 +242,8 @@ export async function fetchOutcomeDetail(
     (item) => (item.lo_code ?? "").toUpperCase() === loCode,
   );
 
+  const reasons = mapFeedback(feedbackData, assessmentsById, outcomeNameByCode);
+
   return {
     outcome: {
       id: outcomeId,
@@ -249,7 +252,8 @@ export async function fetchOutcomeDetail(
       mastery: Math.round(masteryScore?.score ?? 0),
     },
     subjectCode: subjectData.code,
-    reasons: mapFeedback(feedbackData, assessmentsById, outcomeNameByCode),
+    reasons,
+    strategies: deriveStrategies(reasons),
     // No resources/content endpoint yet — see LJAB22-45 (Moodle integration).
     resources: [],
   };

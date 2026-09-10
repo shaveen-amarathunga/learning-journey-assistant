@@ -108,6 +108,14 @@ export const RefreshIcon = (p: IconProps) => (
   </Svg>
 );
 
+export const LightbulbIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M15 14c.2-1 .7-1.7 1.5-2.5C17.7 10.2 18 9 18 8a6 6 0 0 0-12 0c0 1 .3 2.2 1.5 3.5.8.8 1.3 1.5 1.5 2.5" />
+    <path d="M9 18h6" />
+    <path d="M10 22h4" />
+  </Svg>
+);
+
 export const TargetIcon = (p: IconProps) => (
   <Svg {...p}>
     <circle cx="12" cy="12" r="9" />

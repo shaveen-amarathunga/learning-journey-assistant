@@ -1,3 +1,4 @@
+import { deriveStrategies } from "./strategies";
 import type {
   DashboardData,
   LearningPlan,
@@ -56,7 +57,10 @@ export const dashboard: DashboardData = {
   ],
 };
 
-const OUTCOME_DETAILS: Record<string, Omit<OutcomeDetail, "subjectCode">> = {
+const OUTCOME_DETAILS: Record<
+  string,
+  Omit<OutcomeDetail, "subjectCode" | "strategies">
+> = {
   "simplex-algorithm": {
     outcome: OUTCOMES[0],
     reasons: [
@@ -279,7 +283,13 @@ export const genericQuizQuestions: QuizQuestion[] = [
 
 export function getOutcomeDetail(outcomeId: string): OutcomeDetail | undefined {
   const detail = OUTCOME_DETAILS[outcomeId];
-  return detail ? { ...detail, subjectCode: "STM3LPP" } : undefined;
+  return detail
+    ? {
+        ...detail,
+        subjectCode: "STM3LPP",
+        strategies: deriveStrategies(detail.reasons),
+      }
+    : undefined;
 }
 
 export function getTrend(outcomeId: string): OutcomeTrend | undefined {

@@ -36,10 +36,18 @@ export interface Resource {
   href?: string;
 }
 
+export interface StudyStrategy {
+  id: string;
+  title: string; // the technique, e.g. "Retrieval practice"
+  why: string; // one-sentence, evidence-based rationale
+  how: string; // one concrete action for this outcome
+}
+
 export interface OutcomeDetail {
   outcome: LearningOutcome;
   subjectCode: string;
   reasons: FeedbackItem[]; // "Why this score"
+  strategies: StudyStrategy[];
   resources: Resource[];
 }
 
