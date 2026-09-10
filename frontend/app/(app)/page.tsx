@@ -11,7 +11,6 @@ import { Card } from "@/components/ui/Card";
 import { StatCard } from "@/components/ui/StatCard";
 import { MasteryBar } from "@/components/ui/MasteryBar";
 import { Spinner, ErrorState } from "@/components/ui/PageState";
-import { AccountMenu } from "@/components/AccountMenu";
 import { FocusPanel } from "@/components/FocusPanel";
 import { StrengthsPanel } from "@/components/StrengthsPanel";
 import { Disclaimer } from "@/components/ui/Disclaimer";
@@ -74,7 +73,9 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
       {/* Profile header */}
       <header className="flex items-start justify-between gap-4">
         <div className="flex items-center gap-3">
-          <AccountMenu align="left" />
+          <span className="flex h-11 w-11 items-center justify-center rounded-full bg-blue-100 text-sm font-semibold text-blue-700">
+            {student.initials}
+          </span>
           <div>
             <p className="font-semibold text-foreground">{student.name}</p>
             <p className="text-sm text-muted">
