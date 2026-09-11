@@ -28,3 +28,29 @@ export function EmptyState({
     </div>
   );
 }
+
+export function ErrorState({
+  title = "Something went wrong",
+  message = "We couldn't load this right now. Check your connection and try again.",
+  onRetry,
+}: {
+  title?: string;
+  message?: string;
+  onRetry?: () => void;
+}) {
+  return (
+    <div className="rounded-2xl border border-border bg-surface px-6 py-14 text-center">
+      <p className="font-medium text-foreground">{title}</p>
+      <p className="mx-auto mt-2 max-w-sm text-sm text-muted">{message}</p>
+      {onRetry ? (
+        <button
+          type="button"
+          onClick={onRetry}
+          className="mt-4 inline-flex h-9 items-center rounded-xl border border-border px-4 text-sm font-medium text-foreground hover:bg-neutral-50"
+        >
+          Try again
+        </button>
+      ) : null}
+    </div>
+  );
+}

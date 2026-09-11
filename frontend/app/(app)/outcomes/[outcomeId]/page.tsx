@@ -8,7 +8,10 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { MasteryBadge } from "@/components/ui/Badge";
 import { BackHeader } from "@/components/BackHeader";
-import { Spinner, EmptyState } from "@/components/ui/PageState";
+import { StudyStrategies } from "@/components/StudyStrategies";
+import { ReflectionPrompt } from "@/components/ReflectionPrompt";
+import { Disclaimer } from "@/components/ui/Disclaimer";
+import { Spinner, EmptyState, ErrorState } from "@/components/ui/PageState";
 import {
   FileTextIcon,
   PlayIcon,
@@ -16,23 +19,56 @@ import {
 } from "@/components/ui/icons";
 
 export default function OutcomeDetailPage() {
-  const router = useRouter();
   const params = useParams<{ outcomeId: string }>();
-  const outcomeId = params.outcomeId;
+  const [reloadKey, setReloadKey] = useState(0);
+
+  // Keying on outcomeId + reloadKey remounts on navigation and on retry,
+  // so loading/error state always starts fresh.
+  return (
+    <OutcomeDetailView
+      key={`${params.outcomeId}:${reloadKey}`}
+      outcomeId={params.outcomeId}
+      onRetry={() => setReloadKey((k) => k + 1)}
+    />
+  );
+}
+
+function OutcomeDetailView({
+  outcomeId,
+  onRetry,
+}: {
+  outcomeId: string;
+  onRetry: () => void;
+}) {
+  const router = useRouter();
 
   const [detail, setDetail] = useState<OutcomeDetail | null | undefined>(
     undefined,
   );
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let active = true;
-    fetchOutcomeDetail(outcomeId).then((d) => {
-      if (active) setDetail(d);
-    });
+    fetchOutcomeDetail(outcomeId)
+      .then((d) => {
+        if (active) setDetail(d);
+      })
+      .catch(() => {
+        if (active) setFailed(true);
+      });
     return () => {
       active = false;
     };
   }, [outcomeId]);
+
+  if (failed) {
+    return (
+      <div className="space-y-6">
+        <BackHeader title="Learning outcome" />
+        <ErrorState onRetry={onRetry} />
+      </div>
+    );
+  }
 
   if (detail === undefined) return <Spinner label="Loading outcome" />;
 
@@ -47,20 +83,38 @@ export default function OutcomeDetailPage() {
     );
   }
 
-  const { outcome, reasons, resources } = detail;
+  const { outcome, subjectCode, reasons, strategies, resources } = detail;
+  const assessmentCount = new Set(reasons.map((r) => r.assignment)).size;
+  const provenance =
+    reasons.length > 0
+      ? `This ${outcome.mastery}% is a formative estimate from ${reasons.length} rubric comment${
+          reasons.length > 1 ? "s" : ""
+        } across ${assessmentCount} assessment${
+          assessmentCount > 1 ? "s" : ""
+        } — not an official grade.`
+      : `No marked work is linked to this outcome yet — this is a starting estimate, not an official grade.`;
 
   return (
     <div className="space-y-6">
       <BackHeader
-        title={outcome.name}
-        subtitle="STM3LPP"
+        title={outcome.code ?? outcome.name}
+        subtitle={
+          outcome.code ? `${subjectCode} · ${outcome.name}` : subjectCode
+        }
         right={<MasteryBadge value={outcome.mastery} />}
       />
 
       <Card className="space-y-7">
+        <Disclaimer>{provenance}</Disclaimer>
+
         {/* Why this score */}
         <section>
           <h2 className="text-sm font-medium text-muted">Why this score</h2>
+          {reasons.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">
+              No graded feedback is linked to this outcome yet.
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-2">
             {reasons.map((fb) => (
               <li
@@ -81,27 +135,46 @@ export default function OutcomeDetailPage() {
           </ul>
         </section>
 
+        {/* Study strategies */}
+        <StudyStrategies strategies={strategies} mastery={outcome.mastery} />
+
+        {/* Commit to a next step */}
+        <ReflectionPrompt
+          outcomeId={outcome.id}
+          outcomeLabel={outcome.code ?? outcome.name}
+        />
+
         {/* Recommended resources */}
         <section>
           <h2 className="text-sm font-medium text-muted">
             Recommended resources
           </h2>
-          <ul className="mt-3 space-y-2">
-            {resources.map((r) => (
-              <li key={r.id}>
-                <a
-                  href={r.href ?? "#"}
-                  className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 hover:bg-neutral-50"
-                >
-                  <FileTextIcon className="h-4 w-4 shrink-0 text-neutral-400" />
-                  <span className="text-[15px] text-foreground">{r.title}</span>
-                </a>
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2 text-xs text-muted">
-            Grounded in your subject material — not freely generated.
-          </p>
+          {resources.length === 0 ? (
+            <p className="mt-3 text-sm text-muted">
+              Linked subject resources are coming soon.
+            </p>
+          ) : (
+            <>
+              <ul className="mt-3 space-y-2">
+                {resources.map((r) => (
+                  <li key={r.id}>
+                    <a
+                      href={r.href ?? "#"}
+                      className="flex items-center gap-3 rounded-xl border border-border px-4 py-3 hover:bg-neutral-50"
+                    >
+                      <FileTextIcon className="h-4 w-4 shrink-0 text-neutral-400" />
+                      <span className="text-[15px] text-foreground">
+                        {r.title}
+                      </span>
+                    </a>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs text-muted">
+                Grounded in your subject material — not freely generated.
+              </p>
+            </>
+          )}
         </section>
 
         <Button

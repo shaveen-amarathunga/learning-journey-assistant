@@ -1,12 +1,12 @@
 "use client";
 
 import { useEffect } from "react";
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { isSignedIn, useSession } from "@/lib/auth";
 import { useHydrated } from "@/lib/useHydrated";
-import { AccountMenu } from "@/components/AccountMenu";
+import { AppTopBar } from "@/components/AppTopBar";
 import { Spinner } from "@/components/ui/PageState";
+import { cn } from "@/lib/cn";
 
 export default function AppLayout({
   children,
@@ -25,26 +25,31 @@ export default function AppLayout({
     }
   }, [hydrated, signedIn, router]);
 
-  const show = hydrated && signedIn;
-  // The dashboard has its own header with the account menu, so the shared
-  // top bar only appears on the other screens.
-  const showTopBar = show && pathname !== "/";
+  // The dashboard is a wide two-column layout; the other screens are a single
+  // reading column and look better narrower.
+  const widthClass =
+    pathname === "/"
+      ? "max-w-5xl"
+      : pathname.startsWith("/quiz")
+        ? "max-w-2xl"
+        : "max-w-3xl";
+
+  if (!(hydrated && signedIn)) {
+    return (
+      <div className="mx-auto w-full max-w-5xl px-5 pt-16 sm:px-8">
+        <Spinner label="Loading your journey" />
+      </div>
+    );
+  }
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-5 pb-20 pt-6 sm:px-6">
-      {showTopBar ? (
-        <div className="mb-5 flex items-center justify-between">
-          <Link
-            href="/"
-            className="text-sm font-semibold tracking-tight text-foreground"
-          >
-            Learning Journey Assistant
-          </Link>
-          <AccountMenu size="sm" />
-        </div>
-      ) : null}
-
-      {show ? children : <Spinner label="Loading your journey" />}
-    </div>
+    <>
+      <AppTopBar />
+      <main
+        className={cn("mx-auto w-full px-5 pb-24 sm:px-8", widthClass)}
+      >
+        {children}
+      </main>
+    </>
   );
 }

@@ -13,8 +13,9 @@ export interface Student {
 export type MasteryStatus = "low" | "mid" | "high";
 
 export interface LearningOutcome {
-  id: string; // slug, e.g. "simplex-algorithm"
-  name: string; // e.g. "Simplex algorithm"
+  id: string; // slug, e.g. "simplex-algorithm" / "lo1"
+  code?: string; // short label, e.g. "LO1"
+  name: string; // full description, e.g. "Simplex algorithm"
   mastery: number; // 0 - 100
 }
 
@@ -35,9 +36,18 @@ export interface Resource {
   href?: string;
 }
 
+export interface StudyStrategy {
+  id: string;
+  title: string; // the technique, e.g. "Retrieval practice"
+  why: string; // one-sentence, evidence-based rationale
+  how: string; // one concrete action for this outcome
+}
+
 export interface OutcomeDetail {
   outcome: LearningOutcome;
+  subjectCode: string;
   reasons: FeedbackItem[]; // "Why this score"
+  strategies: StudyStrategy[];
   resources: Resource[];
 }
 
@@ -50,6 +60,8 @@ export interface PlanStep {
   targetOutcomeName: string;
   status: PlanStepStatus;
   resultNote?: string; // e.g. "scored 4/5"
+  origin?: "reflection"; // added by the student from an outcome screen
+  href?: string; // if the step opens somewhere, e.g. a practice quiz
 }
 
 export interface LearningPlan {
@@ -65,6 +77,7 @@ export interface TrendPoint {
 
 export interface OutcomeTrend {
   outcomeId: string;
+  outcomeCode?: string;
   outcomeName: string;
   series: TrendPoint[];
   deltaSinceLast: number; // signed, percentage points
@@ -94,12 +107,14 @@ export interface QuizQuestion {
 
 export interface Quiz {
   outcomeId: string;
+  outcomeCode?: string;
   outcomeName: string;
   questions: QuizQuestion[];
   masteryBefore: number;
 }
 
 export interface QuizResult {
+  outcomeCode?: string;
   outcomeName: string;
   correct: number;
   total: number;

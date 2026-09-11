@@ -15,7 +15,14 @@ import {
   XIcon,
 } from "@/components/ui/icons";
 
-type Phase = "loading" | "quiz" | "submitting" | "results";
+type Phase = "loading" | "quiz" | "predict" | "submitting" | "results";
+type Confidence = "low" | "med" | "high";
+
+const CONFIDENCE_OPTIONS: { level: Confidence; label: string }[] = [
+  { level: "low", label: "Guessing" },
+  { level: "med", label: "Fairly sure" },
+  { level: "high", label: "Certain" },
+];
 
 export default function QuizPage() {
   const router = useRouter();
@@ -26,6 +33,8 @@ export default function QuizPage() {
   const [phase, setPhase] = useState<Phase>("loading");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [confidence, setConfidence] = useState<Record<string, Confidence>>({});
+  const [predicted, setPredicted] = useState<number | null>(null);
   const [result, setResult] = useState<QuizResult | null>(null);
 
   useEffect(() => {
@@ -55,17 +64,27 @@ export default function QuizPage() {
   const total = quiz!.questions.length;
   const question = quiz!.questions[index];
   const selected = answers[question?.id ?? ""] ?? "";
+  const conf = confidence[question?.id ?? ""];
 
   function choose(key: string) {
     setAnswers((prev) => ({ ...prev, [question.id]: key }));
   }
 
-  async function next() {
-    if (!selected) return;
+  function rateConfidence(level: Confidence) {
+    setConfidence((prev) => ({ ...prev, [question.id]: level }));
+  }
+
+  function next() {
+    if (!selected || !conf) return;
     if (index < total - 1) {
       setIndex(index + 1);
       return;
     }
+    setPhase("predict");
+  }
+
+  async function confirmPrediction(value: number) {
+    setPredicted(value);
     setPhase("submitting");
     const r = await submitQuiz(outcomeId, answers);
     setResult(r);
@@ -74,29 +93,59 @@ export default function QuizPage() {
 
   function retry() {
     setAnswers({});
+    setConfidence({});
     setIndex(0);
+    setPredicted(null);
     setResult(null);
     setPhase("quiz");
   }
 
-  if (phase === "results" && result) {
-    return <Results result={result} onRetry={retry} />;
+  if (phase === "predict" || phase === "submitting") {
+    return (
+      <Predict
+        total={total}
+        busy={phase === "submitting"}
+        onConfirm={confirmPrediction}
+      />
+    );
   }
 
-  const progress =
-    phase === "submitting" ? 100 : ((index + 1) / total) * 100;
+  if (phase === "results" && result) {
+    return (
+      <Results
+        result={result}
+        predicted={predicted}
+        confidence={confidence}
+        onRetry={retry}
+      />
+    );
+  }
+
+  const progress = ((index + 1) / total) * 100;
+
+  const outcomeLabel = quiz!.outcomeCode
+    ? `${quiz!.outcomeCode} · ${quiz!.outcomeName}`
+    : quiz!.outcomeName;
 
   return (
     <Card className="space-y-5">
-      <div className="flex items-center justify-between">
-        <p className="text-sm text-muted">
-          {quiz!.outcomeName} · Question {index + 1} of {total}
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p
+            className="truncate text-[15px] font-medium text-foreground"
+            title={outcomeLabel}
+          >
+            {outcomeLabel}
+          </p>
+          <p className="mt-0.5 text-sm text-muted">
+            Question {index + 1} of {total}
+          </p>
+        </div>
         <button
           type="button"
           aria-label="Close quiz"
           onClick={() => router.push(`/outcomes/${outcomeId}`)}
-          className="rounded-lg p-1 text-muted hover:bg-neutral-100 hover:text-foreground"
+          className="shrink-0 rounded-lg p-1 text-muted hover:bg-neutral-100 hover:text-foreground"
         >
           <XIcon />
         </button>
@@ -126,7 +175,7 @@ export default function QuizPage() {
               <label
                 key={opt.key}
                 className={cn(
-                  "flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-[15px] transition-colors",
+                  "flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-[15px] transition-colors has-[:focus-visible]:outline has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-brand",
                   active
                     ? "border-blue-500 bg-blue-50 text-foreground"
                     : "border-border hover:bg-neutral-50",
@@ -148,29 +197,130 @@ export default function QuizPage() {
         </div>
       </fieldset>
 
+      {selected ? (
+        <div>
+          <p className="text-sm font-medium text-foreground">
+            How sure are you?
+          </p>
+          <div className="mt-2 flex gap-2">
+            {CONFIDENCE_OPTIONS.map(({ level, label }) => (
+              <button
+                key={level}
+                type="button"
+                onClick={() => rateConfidence(level)}
+                aria-pressed={conf === level}
+                className={cn(
+                  "flex-1 rounded-xl border px-3 py-2 text-sm font-medium transition-colors",
+                  conf === level
+                    ? "border-blue-500 bg-blue-50 text-foreground"
+                    : "border-border text-muted hover:bg-neutral-50",
+                )}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+      ) : null}
+
       <Button
         size="lg"
         fullWidth
         onClick={next}
-        disabled={!selected || phase === "submitting"}
+        disabled={!selected || !conf}
       >
-        {phase === "submitting"
-          ? "Scoring…"
-          : index < total - 1
-            ? "Submit answer"
-            : "Finish quiz"}
+        {index < total - 1 ? "Submit answer" : "Finish quiz"}
       </Button>
+
+      <p className="text-center text-xs text-muted">
+        Sample questions — adaptive generation is coming.
+      </p>
     </Card>
   );
 }
 
+function Predict({
+  total,
+  busy,
+  onConfirm,
+}: {
+  total: number;
+  busy: boolean;
+  onConfirm: (value: number) => void;
+}) {
+  const [pick, setPick] = useState<number | null>(null);
+
+  return (
+    <Card className="space-y-5">
+      <div className="text-center">
+        <h1 className="text-lg font-semibold text-foreground">
+          Before you see your results
+        </h1>
+        <p className="mt-1 text-sm text-muted">
+          How many of the {total} do you think you got right?
+        </p>
+      </div>
+
+      <div className="flex justify-center gap-2">
+        {Array.from({ length: total + 1 }, (_, n) => (
+          <button
+            key={n}
+            type="button"
+            onClick={() => setPick(n)}
+            aria-pressed={pick === n}
+            className={cn(
+              "h-11 w-11 rounded-xl border text-[15px] font-semibold transition-colors",
+              pick === n
+                ? "border-blue-500 bg-blue-50 text-foreground"
+                : "border-border text-muted hover:bg-neutral-50",
+            )}
+          >
+            {n}
+          </button>
+        ))}
+      </div>
+
+      <Button
+        size="lg"
+        fullWidth
+        disabled={pick === null || busy}
+        onClick={() => pick !== null && onConfirm(pick)}
+      >
+        {busy ? "Scoring…" : "See results"}
+      </Button>
+
+      <p className="text-center text-xs text-muted">
+        Predicting first sharpens how well you judge your own understanding.
+      </p>
+    </Card>
+  );
+}
+
+function calibrationNote(predicted: number, actual: number): string {
+  const diff = actual - predicted;
+  if (diff === 0) return "Bang on — good read of your own understanding.";
+  if (diff > 0)
+    return `Better than you predicted by ${diff}. Trust your preparation a little more.`;
+  return `A bit optimistic by ${-diff}. Look closely at the ones you felt sure about.`;
+}
+
 function Results({
   result,
+  predicted,
+  confidence,
   onRetry,
 }: {
   result: QuizResult;
+  predicted: number | null;
+  confidence: Record<string, Confidence>;
   onRetry: () => void;
 }) {
+  const changed = result.masteryAfter - result.masteryBefore;
+  const direction = changed > 0 ? "up" : changed < 0 ? "down" : "flat";
+  const confidentlyWrong = result.review.filter(
+    (r) => confidence[r.question.id] === "high",
+  ).length;
+
   return (
     <Card className="space-y-6">
       <div className="flex flex-col items-center text-center">
@@ -179,17 +329,47 @@ function Results({
           Quiz complete
         </h1>
         <p className="mt-1 text-sm text-muted">
-          {result.outcomeName} · {result.correct} of {result.total} correct
+          {result.outcomeCode ?? result.outcomeName} · {result.correct} of{" "}
+          {result.total} correct
         </p>
       </div>
+
+      {predicted !== null ? (
+        <div className="rounded-xl bg-neutral-50 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <span className="text-[15px] font-medium text-foreground">
+              Your prediction
+            </span>
+            <span className="text-sm text-muted">
+              predicted {predicted} · got {result.correct}
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-muted">
+            {calibrationNote(predicted, result.correct)}
+          </p>
+        </div>
+      ) : null}
 
       <div className="flex items-center justify-between rounded-xl bg-neutral-50 px-4 py-3">
         <span className="text-[15px] font-medium text-foreground">
           Mastery updated
         </span>
-        <span className="flex items-center gap-1.5 text-sm font-semibold text-status-high">
+        <span
+          className={cn(
+            "flex items-center gap-1.5 text-sm font-semibold",
+            direction === "up"
+              ? "text-status-high"
+              : direction === "down"
+                ? "text-status-low"
+                : "text-muted",
+          )}
+        >
           {result.masteryBefore}% → {result.masteryAfter}%
-          <TrendingUpIcon className="h-4 w-4" />
+          {direction === "up" ? (
+            <TrendingUpIcon className="h-4 w-4" />
+          ) : direction === "down" ? (
+            <TrendingUpIcon className="h-4 w-4 -scale-y-100" />
+          ) : null}
         </span>
       </div>
 
@@ -200,6 +380,13 @@ function Results({
               ? "Question to review"
               : "Questions to review"}
           </h2>
+          {confidentlyWrong > 0 ? (
+            <p className="mt-1 text-sm text-status-low">
+              You were certain on {confidentlyWrong} of these — treat{" "}
+              {confidentlyWrong === 1 ? "it" : "them"} as a misconception to
+              fix, not a slip.
+            </p>
+          ) : null}
           <ul className="mt-3 space-y-2">
             {result.review.map(({ question, chosenKey }) => (
               <li
@@ -210,6 +397,11 @@ function Results({
                 <div>
                   <p className="text-[15px] font-medium text-foreground">
                     {question.reviewLabel}
+                    {confidence[question.id] === "high" ? (
+                      <span className="ml-2 rounded-full bg-red-50 px-2 py-0.5 text-xs font-medium text-status-low">
+                        you were certain
+                      </span>
+                    ) : null}
                   </p>
                   <p className="mt-0.5 text-sm text-muted">
                     You answered {chosenKey || "—"} · correct answer was{" "}

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/Button";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("alex.s@latrobe.edu.au");
+  const [email, setEmail] = useState("aisha.khan@students.latrobe.edu.au");
   const [password, setPassword] = useState("password");
   const [submitting, setSubmitting] = useState(false);
 
