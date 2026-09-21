@@ -19,17 +19,12 @@ import type {
 // API layer.
 //
 // Every screen talks to the backend through this module only.
-//
-// Migrated to the real backend: fetchDashboard, fetchOutcomeDetail.
-// Still mocked (no backend endpoint yet): student profile, learning plan,
-// trends, quizzes. Those resolve fixtures from lib/mock-data.ts.
 // ---------------------------------------------------------------------------
 
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:5001/api";
 
-// TODO(LJAB22-42): derive these from the authenticated session instead of
-// hardcoding the demo student / subject.
+// TODO: derive these from authenticated session later.
 const DEMO_STUDENT_ID = "S001";
 const DEMO_SUBJECT_CODE = "CSE3CAP";
 
@@ -39,7 +34,9 @@ function delay<T>(value: T): Promise<T> {
   return new Promise((resolve) => setTimeout(() => resolve(value), LATENCY_MS));
 }
 
-// --- raw backend shapes (envelope is always { data: ... }) ----------------
+// ---------------------------------------------------------------------------
+// Raw backend shapes
+// ---------------------------------------------------------------------------
 
 interface RawStudent {
   id: string;
@@ -82,24 +79,53 @@ interface RawFeedback {
   score: number | null;
 }
 
-/** GET a `{ data: T }` envelope, throwing a helpful error on any non-2xx. */
+interface RawQuizAttempt {
+  id: number;
+  student_id: string;
+  lo_id: number;
+  lo_code?: string;
+  score: number;
+  total_questions: number;
+  mastery_before: number;
+  mastery_after: number;
+  completed_at?: string;
+}
+
+// ---------------------------------------------------------------------------
+// API helper
+// ---------------------------------------------------------------------------
+
+/**
+ * GET a backend response with the shape:
+ *
+ * {
+ *   data: T
+ * }
+ *
+ * and return only the data property.
+ */
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(`${API_BASE_URL}${path}`);
+
   if (!res.ok) {
     throw new Error(`Request failed (${res.status}) for ${path}`);
   }
+
   const body = (await res.json()) as { data: T };
+
   return body.data;
 }
 
-// --- shared mappers ------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Shared helpers / mappers
+// ---------------------------------------------------------------------------
 
-/** Route/param-safe id for a learning outcome (e.g. "LO1" -> "lo1"). */
+/** Route-safe ID for a learning outcome. Example: LO1 -> lo1 */
 function outcomeSlug(loCode: string): string {
   return loCode.toLowerCase();
 }
 
-/** "Aisha Khan" -> "AK" */
+/** Example: "Aisha Khan" -> "AK" */
 function initialsFor(name: string): string {
   return (
     name
@@ -120,20 +146,25 @@ function mapFeedback(
   return raw.map((item, index) => {
     const assessment = assessmentsById.get(item.assessment_id);
     const loCode = item.lo_code ?? "";
+
     return {
       id: String(item.id ?? index),
       comment: item.comment ?? "Assessment feedback",
       assignment: assessment?.title ?? "Assessment",
       outcomeId: loCode ? outcomeSlug(loCode) : "unknown",
-      outcomeName: outcomeNameByCode.get(loCode.toUpperCase()) ?? loCode ?? "Learning outcome",
-      // Rubric score is stored against the parent assessment's max marks.
+      outcomeName:
+        outcomeNameByCode.get(loCode.toUpperCase()) ??
+        loCode ??
+        "Learning outcome",
       score: Math.round(item.score ?? 0),
       maxScore: assessment?.max_marks ?? 100,
     };
   });
 }
 
-// --- endpoints ---------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// STUDENT
+// ---------------------------------------------------------------------------
 
 export async function fetchStudent(): Promise<Student> {
   const [studentData, subjectData] = await Promise.all([
@@ -151,14 +182,36 @@ export async function fetchStudent(): Promise<Student> {
   };
 }
 
+// ---------------------------------------------------------------------------
+// DASHBOARD
+// ---------------------------------------------------------------------------
+
 export async function fetchDashboard(): Promise<DashboardData> {
-  const [studentData, masteryData, feedbackData, subjectData] =
-    await Promise.all([
-      getJson<RawStudent>(`/students/${DEMO_STUDENT_ID}`),
-      getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
-      getJson<RawFeedback[]>(`/students/${DEMO_STUDENT_ID}/feedback`),
-      getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
-    ]);
+  const [
+    studentData,
+    masteryData,
+    feedbackData,
+    subjectData,
+    quizAttempts,
+  ] = await Promise.all([
+    getJson<RawStudent>(`/students/${DEMO_STUDENT_ID}`),
+
+    getJson<RawMasteryScore[]>(
+      `/students/${DEMO_STUDENT_ID}/mastery`,
+    ),
+
+    getJson<RawFeedback[]>(
+      `/students/${DEMO_STUDENT_ID}/feedback`,
+    ),
+
+    getJson<RawSubject>(
+      `/subjects/${DEMO_SUBJECT_CODE}`,
+    ),
+
+    getJson<RawQuizAttempt[]>(
+      `/students/${DEMO_STUDENT_ID}/quiz-attempts`,
+    ),
+  ]);
 
   const outcomeNameByCode = new Map(
     subjectData.learning_outcomes.map((lo) => [
@@ -166,17 +219,23 @@ export async function fetchDashboard(): Promise<DashboardData> {
       lo.description,
     ]),
   );
+
   const assessmentsById = new Map(
-    subjectData.assessments.map((a) => [a.id, a]),
+    subjectData.assessments.map((assessment) => [
+      assessment.id,
+      assessment,
+    ]),
   );
 
   const outcomes: LearningOutcome[] = masteryData.map((item) => {
     const code = item.lo_code ?? "";
+
     return {
       id: outcomeSlug(code || `lo-${item.lo_id}`),
       code: code || undefined,
       name:
-        outcomeNameByCode.get(code.toUpperCase()) ?? (code || "Learning outcome"),
+        outcomeNameByCode.get(code.toUpperCase()) ??
+        (code || "Learning outcome"),
       mastery: Math.round(item.score),
     };
   });
@@ -184,8 +243,10 @@ export async function fetchDashboard(): Promise<DashboardData> {
   const overallMastery =
     masteryData.length > 0
       ? Math.round(
-          masteryData.reduce((sum, item) => sum + item.score, 0) /
-            masteryData.length,
+          masteryData.reduce(
+            (sum, item) => sum + item.score,
+            0,
+          ) / masteryData.length,
         )
       : 0;
 
@@ -204,32 +265,53 @@ export async function fetchDashboard(): Promise<DashboardData> {
       subjectCode: subjectData.code,
       subjectName: subjectData.name,
     },
+
     overallMastery,
+
     outcomesTracked: outcomes.length,
-    // TODO(LJAB22-49 / quiz backend): no quiz-history endpoint yet.
-    quizzesCompleted: 0,
+
+    // Real number of completed quizzes saved in the backend.
+    quizzesCompleted: quizAttempts.length,
+
     outcomes,
+
     recentFeedback,
   };
 }
+
+// ---------------------------------------------------------------------------
+// OUTCOME DETAIL
+// ---------------------------------------------------------------------------
 
 export async function fetchOutcomeDetail(
   outcomeId: string,
 ): Promise<OutcomeDetail | null> {
   const loCode = outcomeId.toUpperCase();
 
-  const [subjectData, masteryData, feedbackData] = await Promise.all([
-    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
-    getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
-    getJson<RawFeedback[]>(
-      `/students/${DEMO_STUDENT_ID}/feedback?lo_code=${encodeURIComponent(loCode)}`,
-    ),
-  ]);
+  const [subjectData, masteryData, feedbackData] =
+    await Promise.all([
+      getJson<RawSubject>(
+        `/subjects/${DEMO_SUBJECT_CODE}`,
+      ),
+
+      getJson<RawMasteryScore[]>(
+        `/students/${DEMO_STUDENT_ID}/mastery`,
+      ),
+
+      getJson<RawFeedback[]>(
+        `/students/${DEMO_STUDENT_ID}/feedback?lo_code=${encodeURIComponent(
+          loCode,
+        )}`,
+      ),
+    ]);
 
   const lo = subjectData.learning_outcomes.find(
     (item) => item.lo_code.toUpperCase() === loCode,
   );
-  if (!lo) return null;
+
+  if (!lo) {
+    return null;
+  }
 
   const outcomeNameByCode = new Map(
     subjectData.learning_outcomes.map((item) => [
@@ -237,14 +319,24 @@ export async function fetchOutcomeDetail(
       item.description,
     ]),
   );
+
   const assessmentsById = new Map(
-    subjectData.assessments.map((a) => [a.id, a]),
-  );
-  const masteryScore = masteryData.find(
-    (item) => (item.lo_code ?? "").toUpperCase() === loCode,
+    subjectData.assessments.map((assessment) => [
+      assessment.id,
+      assessment,
+    ]),
   );
 
-  const reasons = mapFeedback(feedbackData, assessmentsById, outcomeNameByCode);
+  const masteryScore = masteryData.find(
+    (item) =>
+      (item.lo_code ?? "").toUpperCase() === loCode,
+  );
+
+  const reasons = mapFeedback(
+    feedbackData,
+    assessmentsById,
+    outcomeNameByCode,
+  );
 
   return {
     outcome: {
@@ -253,33 +345,58 @@ export async function fetchOutcomeDetail(
       name: lo.description,
       mastery: Math.round(masteryScore?.score ?? 0),
     },
+
     subjectCode: subjectData.code,
+
     reasons,
+
     strategies: deriveStrategies(reasons),
-    // No resources/content endpoint yet — see LJAB22-45 (Moodle integration).
+
+    // Moodle/content resources can be connected later.
     resources: [],
   };
 }
 
-/** Merge the student's saved reflections in as plan steps, newest first. */
-function withReflections(plan: LearningPlan): LearningPlan {
+// ---------------------------------------------------------------------------
+// LEARNING PLAN
+// ---------------------------------------------------------------------------
+
+/**
+ * Merge saved reflections into the learning plan,
+ * newest first.
+ */
+function withReflections(
+  plan: LearningPlan,
+): LearningPlan {
   const steps = reflectionSteps();
+
   return steps.length > 0
-    ? { ...plan, steps: [...steps, ...plan.steps] }
+    ? {
+        ...plan,
+        steps: [...steps, ...plan.steps],
+      }
     : plan;
 }
 
 /**
- * Build a learning plan from the student's two weakest outcomes: the top
- * study strategy for each (its concrete action) plus a targeted quiz.
- * No plan-generation endpoint yet — see LJAB22-49.
+ * Build a learning plan using the student's
+ * two weakest learning outcomes.
  */
 async function buildLearningPlan(): Promise<LearningPlan> {
-  const [subjectData, masteryData, feedbackData] = await Promise.all([
-    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
-    getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
-    getJson<RawFeedback[]>(`/students/${DEMO_STUDENT_ID}/feedback`),
-  ]);
+  const [subjectData, masteryData, feedbackData] =
+    await Promise.all([
+      getJson<RawSubject>(
+        `/subjects/${DEMO_SUBJECT_CODE}`,
+      ),
+
+      getJson<RawMasteryScore[]>(
+        `/students/${DEMO_STUDENT_ID}/mastery`,
+      ),
+
+      getJson<RawFeedback[]>(
+        `/students/${DEMO_STUDENT_ID}/feedback`,
+      ),
+    ]);
 
   const nameByCode = new Map(
     subjectData.learning_outcomes.map((lo) => [
@@ -287,8 +404,12 @@ async function buildLearningPlan(): Promise<LearningPlan> {
       lo.description,
     ]),
   );
+
   const assessmentsById = new Map(
-    subjectData.assessments.map((a) => [a.id, a]),
+    subjectData.assessments.map((assessment) => [
+      assessment.id,
+      assessment,
+    ]),
   );
 
   const weakest = [...masteryData]
@@ -296,16 +417,24 @@ async function buildLearningPlan(): Promise<LearningPlan> {
     .slice(0, 2);
 
   const steps: PlanStep[] = [];
-  for (const m of weakest) {
-    const code = (m.lo_code ?? "").toUpperCase() || "this outcome";
+
+  for (const mastery of weakest) {
+    const code =
+      (mastery.lo_code ?? "").toUpperCase() ||
+      "this outcome";
+
     const reasons = mapFeedback(
       feedbackData.filter(
-        (f) => (f.lo_code ?? "").toUpperCase() === code,
+        (feedback) =>
+          (feedback.lo_code ?? "").toUpperCase() ===
+          code,
       ),
       assessmentsById,
       nameByCode,
     );
+
     const [topStrategy] = deriveStrategies(reasons);
+
     if (topStrategy) {
       steps.push({
         id: `plan-${code}-strategy`,
@@ -315,6 +444,7 @@ async function buildLearningPlan(): Promise<LearningPlan> {
         status: "todo",
       });
     }
+
     steps.push({
       id: `plan-${code}-quiz`,
       title: `Complete a practice quiz — ${code}`,
@@ -327,7 +457,8 @@ async function buildLearningPlan(): Promise<LearningPlan> {
 
   return withReflections({
     subjectCode: subjectData.code,
-    generatedFrom: "generated from your weakest outcomes",
+    generatedFrom:
+      "generated from your weakest outcomes",
     steps,
   });
 }
@@ -340,15 +471,24 @@ export async function regenerateLearningPlan(): Promise<LearningPlan> {
   return buildLearningPlan();
 }
 
-const clampPct = (n: number) => Math.max(0, Math.min(100, Math.round(n)));
+// ---------------------------------------------------------------------------
+// TRENDS
+// ---------------------------------------------------------------------------
+
+const clampPct = (n: number) =>
+  Math.max(0, Math.min(100, Math.round(n)));
 
 export async function fetchTrends(): Promise<OutcomeTrend[]> {
-  // No assessment-level history endpoint yet — synthesise an indicative
-  // 3-point series ending at the real current mastery. See LJAB22-49.
-  const [subjectData, masteryData] = await Promise.all([
-    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
-    getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
-  ]);
+  const [subjectData, masteryData] =
+    await Promise.all([
+      getJson<RawSubject>(
+        `/subjects/${DEMO_SUBJECT_CODE}`,
+      ),
+
+      getJson<RawMasteryScore[]>(
+        `/students/${DEMO_STUDENT_ID}/mastery`,
+      ),
+    ]);
 
   const nameByCode = new Map(
     subjectData.learning_outcomes.map((lo) => [
@@ -357,45 +497,99 @@ export async function fetchTrends(): Promise<OutcomeTrend[]> {
     ]),
   );
 
-  return masteryData.map((m) => {
-    const code = (m.lo_code ?? "").toUpperCase();
-    const current = clampPct(m.score);
+  return masteryData.map((mastery) => {
+    const code =
+      (mastery.lo_code ?? "").toUpperCase();
+
+    const current = clampPct(mastery.score);
+
     const rising = current >= 78;
+
     const step1 = rising
-      ? clampPct(current - Math.max(2, current * 0.05))
+      ? clampPct(
+          current -
+            Math.max(2, current * 0.05),
+        )
       : current;
-    const step0 = clampPct(step1 - Math.max(3, current * 0.06));
+
+    const step0 = clampPct(
+      step1 - Math.max(3, current * 0.06),
+    );
 
     return {
-      outcomeId: code.toLowerCase() || `lo-${m.lo_id}`,
+      outcomeId:
+        code.toLowerCase() ||
+        `lo-${mastery.lo_id}`,
+
       outcomeCode: code || undefined,
-      outcomeName: nameByCode.get(code) ?? code,
+
+      outcomeName:
+        nameByCode.get(code) ?? code,
+
       series: [
-        { label: "Assessment 1", value: step0 },
-        { label: "Quiz 1", value: step1 },
-        { label: "Quiz 2", value: current },
+        {
+          label: "Assessment 1",
+          value: step0,
+        },
+        {
+          label: "Quiz 1",
+          value: step1,
+        },
+        {
+          label: "Quiz 2",
+          value: current,
+        },
       ],
-      deltaSinceLast: current - step1,
+
+      deltaSinceLast:
+        current - step1,
     };
   });
 }
 
-/** Resolve an outcome slug ("lo1") to its real code, name and current mastery. */
+// ---------------------------------------------------------------------------
+// QUIZ HELPERS
+// ---------------------------------------------------------------------------
+
+/**
+ * Resolve an outcome slug such as "lo1"
+ * into its actual learning outcome information.
+ */
 async function resolveOutcome(
   outcomeId: string,
-): Promise<{ code: string; name: string; mastery: number } | null> {
+): Promise<{
+  code: string;
+  name: string;
+  mastery: number;
+} | null> {
   const loCode = outcomeId.toUpperCase();
-  const [subjectData, masteryData] = await Promise.all([
-    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
-    getJson<RawMasteryScore[]>(`/students/${DEMO_STUDENT_ID}/mastery`),
-  ]);
+
+  const [subjectData, masteryData] =
+    await Promise.all([
+      getJson<RawSubject>(
+        `/subjects/${DEMO_SUBJECT_CODE}`,
+      ),
+
+      getJson<RawMasteryScore[]>(
+        `/students/${DEMO_STUDENT_ID}/mastery`,
+      ),
+    ]);
+
   const lo = subjectData.learning_outcomes.find(
-    (item) => item.lo_code.toUpperCase() === loCode,
+    (item) =>
+      item.lo_code.toUpperCase() === loCode,
   );
-  if (!lo) return null;
+
+  if (!lo) {
+    return null;
+  }
+
   const score = masteryData.find(
-    (item) => (item.lo_code ?? "").toUpperCase() === loCode,
+    (item) =>
+      (item.lo_code ?? "").toUpperCase() ===
+      loCode,
   );
+
   return {
     code: lo.lo_code,
     name: lo.description,
@@ -403,21 +597,23 @@ async function resolveOutcome(
   };
 }
 
-/** Signed mastery change for a quiz attempt (placeholder formative model). */
-function masteryDelta(correct: number, total: number): number {
-  const ratio = total > 0 ? correct / total : 0;
-  if (ratio >= 1) return 6;
-  if (ratio >= 0.8) return 4;
-  if (ratio >= 0.6) return 1;
-  if (ratio >= 0.4) return -2;
-  return -5;
-}
+// ---------------------------------------------------------------------------
+// QUIZ
+// ---------------------------------------------------------------------------
 
-export async function fetchQuiz(outcomeId: string): Promise<Quiz | null> {
-  // No quiz-generation endpoint yet — placeholder questions, real outcome
-  // metadata. See LJAB22-49 (NLP / adaptive quiz generation).
-  const resolved = await resolveOutcome(outcomeId);
-  if (!resolved) return null;
+export async function fetchQuiz(
+  outcomeId: string,
+): Promise<Quiz | null> {
+  // Questions are still placeholders.
+  // Outcome metadata and mastery are real backend data.
+
+  const resolved =
+    await resolveOutcome(outcomeId);
+
+  if (!resolved) {
+    return null;
+  }
+
   return {
     outcomeId,
     outcomeCode: resolved.code,
@@ -427,38 +623,93 @@ export async function fetchQuiz(outcomeId: string): Promise<Quiz | null> {
   };
 }
 
+// ---------------------------------------------------------------------------
+// SUBMIT QUIZ
+// ---------------------------------------------------------------------------
+
 export async function submitQuiz(
   outcomeId: string,
   answers: Record<string, string>,
 ): Promise<QuizResult> {
-  const resolved = await resolveOutcome(outcomeId);
-  const questions = mock.genericQuizQuestions;
+  const resolved =
+    await resolveOutcome(outcomeId);
 
-  const wrong: { question: QuizQuestion; chosenKey: string }[] = [];
+  const questions =
+    mock.genericQuizQuestions;
+
+  const wrong: {
+    question: QuizQuestion;
+    chosenKey: string;
+  }[] = [];
+
   let correct = 0;
+
   for (const question of questions) {
-    const chosenKey = answers[question.id] ?? "";
-    if (chosenKey === question.correctKey) {
+    const chosenKey =
+      answers[question.id] ?? "";
+
+    if (
+      chosenKey === question.correctKey
+    ) {
       correct += 1;
     } else {
-      wrong.push({ question, chosenKey });
+      wrong.push({
+        question,
+        chosenKey,
+      });
     }
   }
 
   const total = questions.length;
-  const masteryBefore = resolved?.mastery ?? 0;
-  const masteryAfter = Math.max(
-    0,
-    Math.min(100, masteryBefore + masteryDelta(correct, total)),
+
+  if (!resolved?.code) {
+    throw new Error(
+      "Could not resolve learning outcome",
+    );
+  }
+
+  // Save the completed quiz to the backend.
+  // Backend also recalculates mastery.
+  const response = await fetch(
+    `${API_BASE_URL}/students/${DEMO_STUDENT_ID}/quiz-attempts`,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type": "application/json",
+      },
+
+      body: JSON.stringify({
+        lo_code: resolved.code,
+        score: correct,
+        total_questions: total,
+      }),
+    },
   );
 
-  return delay({
-    outcomeCode: resolved?.code,
-    outcomeName: resolved?.name ?? "This outcome",
+  if (!response.ok) {
+    throw new Error(
+      "Failed to save quiz attempt",
+    );
+  }
+
+  const result = await response.json();
+
+  const attempt = result.data;
+
+  return {
+    outcomeCode: resolved.code,
+    outcomeName: resolved.name,
     correct,
     total,
-    masteryBefore,
-    masteryAfter,
+
+    // These now come directly from the backend.
+    masteryBefore:
+      attempt.mastery_before,
+
+    masteryAfter:
+      attempt.mastery_after,
+
     review: wrong,
-  });
+  };
 }

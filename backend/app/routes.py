@@ -21,6 +21,7 @@ from app.models import (
     Assessment,
     RubricFeedback,
     MasteryScore,
+    QuizAttempt,
 )
 from app.mastery_calculator import (
     calculate_mastery_for_student,
@@ -309,3 +310,104 @@ def moodle_student_feedback(student_id):
         "count": len(feedback),
         "source": "moodle",
     }), 200
+
+
+# ===========================================================================
+# QUIZ ATTEMPTS
+# ===========================================================================
+@api.route("/students/<string:student_id>/quiz-attempts", methods=["GET"])
+def get_quiz_attempts(student_id):
+    """Return all completed quiz attempts for a student."""
+
+    # Check student exists
+    student = db.session.get(Student, student_id)
+    if not student:
+        return jsonify({"error": "Student not found"}), 404
+
+    # Get all quiz attempts for this student
+    attempts = QuizAttempt.query.filter_by(
+        student_id=student_id
+    ).all()
+
+    return jsonify({
+        "data": [attempt.to_dict() for attempt in attempts],
+        "count": len(attempts),
+    }), 200
+
+@api.route("/students/<string:student_id>/quiz-attempts", methods=["POST"])
+def create_quiz_attempt(student_id):
+    """Save a completed quiz attempt and update mastery for its learning outcome."""
+    data = request.get_json() or {}
+
+    lo_code = data.get("lo_code")
+    score = data.get("score")
+    total_questions = data.get("total_questions")
+
+    # Validate request
+    if not lo_code or score is None or total_questions is None:
+        return jsonify({
+            "error": "lo_code, score and total_questions are required"
+        }), 400
+
+    if total_questions <= 0 or score < 0 or score > total_questions:
+        return jsonify({
+            "error": "Invalid quiz score"
+        }), 400
+
+    # Find student
+    student = db.session.get(Student, student_id)
+    if not student:
+        return jsonify({"error": "Student not found"}), 404
+
+    # Find learning outcome
+    lo = LearningOutcome.query.filter_by(lo_code=lo_code).first()
+    if not lo:
+        return jsonify({"error": "Learning outcome not found"}), 404
+
+    # Find current mastery
+    mastery = MasteryScore.query.filter_by(
+        student_id=student_id,
+        lo_id=lo.id
+    ).first()
+
+    mastery_before = mastery.score if mastery else 0.0
+
+    # Convert quiz result to percentage
+    quiz_percentage = (score / total_questions) * 100
+
+    # Quiz contributes 25% toward movement from current mastery
+    mastery_after = round(
+        mastery_before + (quiz_percentage - mastery_before) * 0.25,
+        1
+    )
+
+    # Keep mastery between 0 and 100
+    mastery_after = max(0.0, min(100.0, mastery_after))
+
+    # Update/create mastery record
+    if mastery:
+        mastery.score = mastery_after
+    else:
+        mastery = MasteryScore(
+            student_id=student_id,
+            lo_id=lo.id,
+            score=mastery_after,
+        )
+        db.session.add(mastery)
+
+    # Save quiz attempt
+    attempt = QuizAttempt(
+        student_id=student_id,
+        lo_id=lo.id,
+        score=score,
+        total_questions=total_questions,
+        mastery_before=mastery_before,
+        mastery_after=mastery_after,
+    )
+
+    db.session.add(attempt)
+    db.session.commit()
+
+    return jsonify({
+        "data": attempt.to_dict()
+    }), 201

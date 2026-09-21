@@ -188,3 +188,55 @@ class MasteryScore(db.Model):
 
     def __repr__(self):
         return f"<Mastery {self.student_id} LO={self.lo_id} = {self.score}>"
+
+# ---------------------------------------------------------------------------
+# 7. QUIZ ATTEMPT
+# ---------------------------------------------------------------------------
+class QuizAttempt(db.Model):
+    __tablename__ = "quiz_attempts"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+
+    student_id = db.Column(
+        db.String(20),
+        db.ForeignKey("students.id"),
+        nullable=False
+    )
+
+    lo_id = db.Column(
+        db.Integer,
+        db.ForeignKey("learning_outcomes.id"),
+        nullable=False
+    )
+
+    score = db.Column(db.Integer, nullable=False)
+    total_questions = db.Column(db.Integer, nullable=False)
+
+    mastery_before = db.Column(db.Float, nullable=False)
+    mastery_after = db.Column(db.Float, nullable=False)
+
+    completed_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    student = db.relationship("Student")
+    learning_outcome = db.relationship("LearningOutcome")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "student_id": self.student_id,
+            "lo_id": self.lo_id,
+            "lo_code": (
+                self.learning_outcome.lo_code
+                if self.learning_outcome
+                else None
+            ),
+            "score": self.score,
+            "total_questions": self.total_questions,
+            "mastery_before": self.mastery_before,
+            "mastery_after": self.mastery_after,
+            "completed_at": (
+                self.completed_at.isoformat()
+                if self.completed_at
+                else None
+            ),
+        }
