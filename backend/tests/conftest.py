@@ -10,6 +10,8 @@ from app.models import db as _db, Student, Subject, LearningOutcome, Assessment,
 class TestConfig:
     """Config used ONLY during tests — separate in-memory DB."""
     SECRET_KEY = "test-secret"
+    JWT_SECRET_KEY = "test-jwt-secret"
+    JWT_ACCESS_TOKEN_EXPIRES = 3600
     SQLALCHEMY_DATABASE_URI = "sqlite:///:memory:"   # in-memory, wiped each test
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     TESTING = True
@@ -59,7 +61,9 @@ def sample_data(app, db):
 
     # Students
     aisha = Student(id="S001", name="Aisha Khan", email="aisha@test.edu")
+    aisha.set_password("password123")
     ben = Student(id="S002", name="Ben Chen", email="ben@test.edu")
+    ben.set_password("password123")
     db.session.add_all([aisha, ben])
 
     # Assessment

@@ -27,6 +27,7 @@ from app.mastery_calculator import (
     calculate_mastery_for_all_students,
 )
 from app.moodle_client import get_moodle_client
+from app.authorization import require_self
 
 api = Blueprint("api", __name__, url_prefix="/api")
 
@@ -80,6 +81,7 @@ def list_students():
 
 
 @api.route("/students/<string:student_id>", methods=["GET"])
+@require_self()
 def get_student(student_id):
     """Full profile for one student, including counts of related records."""
     student = db.session.get(Student, student_id)
@@ -96,6 +98,7 @@ def get_student(student_id):
 
 
 @api.route("/students/<string:student_id>/feedback", methods=["GET"])
+@require_self()
 def get_student_feedback(student_id):
     """All rubric feedback for one student. Frontend shows this on the feedback detail screen."""
     student = db.session.get(Student, student_id)
@@ -122,6 +125,7 @@ def get_student_feedback(student_id):
 
 
 @api.route("/students/<string:student_id>/mastery", methods=["GET"])
+@require_self()
 def get_student_mastery(student_id):
     """Current mastery scores per LO for one student. Frontend uses this for the Mastery Meter."""
     student = db.session.get(Student, student_id)
@@ -138,6 +142,7 @@ def get_student_mastery(student_id):
 
 
 @api.route("/students/<string:student_id>/mastery", methods=["POST"])
+@require_self()
 def upsert_student_mastery(student_id):
     """Create OR update mastery scores for a student.
 
@@ -256,6 +261,7 @@ def get_subject(code):
 # ===========================================================================
 
 @api.route("/students/<string:student_id>/mastery/recalculate", methods=["POST"])
+@require_self()
 def recalculate_student_mastery(student_id):
     """Recompute mastery scores for one student from their rubric feedback.
     Writes the results to the mastery_scores table."""
@@ -299,6 +305,7 @@ def moodle_subjects():
 
 
 @api.route("/moodle/students/<string:student_id>/feedback", methods=["GET"])
+@require_self()
 def moodle_student_feedback(student_id):
     """Reads a student's feedback directly from Moodle (bypasses our DB).
     Proves the Moodle integration works end-to-end."""

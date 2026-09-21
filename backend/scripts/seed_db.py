@@ -83,11 +83,14 @@ def seed_learning_outcomes():
 def seed_students():
     data = load_json("students.json")
     for row in data:
-        db.session.add(Student(
+        student = Student(
             id=row["id"],
             name=row["name"],
             email=row["email"],
-        ))
+        )
+        student.set_password("password123")
+        db.session.add(student)
+
     print(f"  ✓ Seeded {len(data)} student(s)")
 
 
