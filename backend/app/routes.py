@@ -12,6 +12,7 @@ Endpoint conventions:
 """
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import SQLAlchemyError
+from app.feedback_analyzer import get_student_knowledge_gaps
 
 from app.models import (
     db,
@@ -312,6 +313,7 @@ def moodle_student_feedback(student_id):
     }), 200
 
 
+
 # ===========================================================================
 # QUIZ ATTEMPTS
 # ===========================================================================
@@ -411,3 +413,26 @@ def create_quiz_attempt(student_id):
     return jsonify({
         "data": attempt.to_dict()
     }), 201
+
+
+@api.route("/students/<string:student_id>/knowledge-gaps", methods=["GET"])
+def get_knowledge_gaps(student_id):
+    """
+    Analyse a student's rubric feedback and return
+    NLP-identified knowledge gaps and recommendations.
+    """
+
+    try:
+        result = get_student_knowledge_gaps(
+            "data/rubric_feedback.json",
+            student_id
+        )
+
+        return jsonify({
+            "data": result
+        }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
