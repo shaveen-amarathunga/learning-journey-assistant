@@ -2,15 +2,12 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+
 import { fetchStudent } from "@/lib/api";
 import { signOut } from "@/lib/auth";
 import type { Student } from "@/lib/types";
 import { cn } from "@/lib/cn";
 
-/**
- * Avatar button that opens a small menu with the signed-in student's details
- * and a Sign out action. Used in the dashboard header and the app top bar.
- */
 export function AccountMenu({
   size = "md",
   align = "right",
@@ -19,15 +16,21 @@ export function AccountMenu({
   align?: "left" | "right";
 }) {
   const router = useRouter();
+
   const [student, setStudent] = useState<Student | null>(null);
   const [open, setOpen] = useState(false);
+
   const rootRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let active = true;
+
     fetchStudent().then((s) => {
-      if (active) setStudent(s);
+      if (active) {
+        setStudent(s);
+      }
     });
+
     return () => {
       active = false;
     };
@@ -35,26 +38,41 @@ export function AccountMenu({
 
   useEffect(() => {
     if (!open) return;
+
     function onPointerDown(e: PointerEvent) {
-      if (!rootRef.current?.contains(e.target as Node)) setOpen(false);
+      if (!rootRef.current?.contains(e.target as Node)) {
+        setOpen(false);
+      }
     }
+
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") setOpen(false);
+      if (e.key === "Escape") {
+        setOpen(false);
+      }
     }
+
     document.addEventListener("pointerdown", onPointerDown);
     document.addEventListener("keydown", onKeyDown);
+
     return () => {
       document.removeEventListener("pointerdown", onPointerDown);
       document.removeEventListener("keydown", onKeyDown);
     };
   }, [open]);
 
+  function handleProfile() {
+    setOpen(false);
+    router.push("/profile");
+  }
+
   function handleSignOut() {
+    setOpen(false);
     signOut();
     router.replace("/login");
   }
 
-  const avatarSize = size === "sm" ? "h-9 w-9 text-xs" : "h-11 w-11 text-sm";
+  const avatarSize =
+    size === "sm" ? "h-9 w-9 text-xs" : "h-11 w-11 text-sm";
 
   return (
     <div ref={rootRef} className="relative">
@@ -84,18 +102,31 @@ export function AccountMenu({
             <p className="text-sm font-semibold text-foreground">
               {student?.name ?? "Student"}
             </p>
+
             <p className="mt-0.5 truncate text-xs text-muted">
               {student?.email ?? ""}
             </p>
           </div>
-          <button
-            type="button"
-            role="menuitem"
-            onClick={handleSignOut}
-            className="w-full px-4 py-2.5 text-left text-sm font-medium text-status-low hover:bg-neutral-50"
-          >
-            Sign out
-          </button>
+
+          <div className="py-1">
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleProfile}
+              className="w-full px-4 py-2.5 text-left text-sm font-medium text-foreground hover:bg-neutral-50"
+            >
+              View profile
+            </button>
+
+            <button
+              type="button"
+              role="menuitem"
+              onClick={handleSignOut}
+              className="w-full px-4 py-2.5 text-left text-sm font-medium text-status-low hover:bg-neutral-50"
+            >
+              Sign out
+            </button>
+          </div>
         </div>
       ) : null}
     </div>
