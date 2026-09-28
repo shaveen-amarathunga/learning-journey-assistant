@@ -372,3 +372,35 @@ def get_personalised_recommendations(student_id):
         return jsonify({
             "error": str(error)
         }), 500
+    
+@api.route("/students/<string:student_id>/ai-recommendations", methods=["GET"])
+def get_ai_recommendations(student_id):
+    """
+    Generate LLM-powered personalised learning recommendations
+    using the student's identified knowledge gaps.
+    """
+    try:
+        from app.feedback_analyzer import get_student_knowledge_gaps
+        from app.llm_service import generate_student_ai_recommendations
+
+        result = get_student_knowledge_gaps(
+            "data/rubric_feedback.json",
+            student_id
+        )
+
+        recommendations = generate_student_ai_recommendations(
+            result["knowledge_gaps"]
+        )
+
+        return jsonify({
+            "data": {
+                "student_id": student_id,
+                "recommendations": recommendations,
+                "count": len(recommendations)
+            }
+        }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
