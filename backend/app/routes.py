@@ -316,3 +316,91 @@ def moodle_student_feedback(student_id):
         "count": len(feedback),
         "source": "moodle",
     }), 200
+
+@api.route("/students/<string:student_id>/knowledge-gaps", methods=["GET"])
+def get_knowledge_gaps(student_id):
+    """
+    Analyse a student's rubric feedback and return
+    NLP-identified knowledge gaps and recommendations.
+    """
+
+    try:
+        result = get_student_knowledge_gaps(
+            "data/rubric_feedback.json",
+            student_id
+        )
+
+        return jsonify({
+            "data": result
+        }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
+@api.route("/students/<string:student_id>/recommendations", methods=["GET"])
+def get_personalised_recommendations(student_id):
+    """
+    Generate personalised learning recommendations for a student
+    using NLP-identified knowledge gaps.
+    """
+    try:
+        from app.feedback_analyzer import get_student_knowledge_gaps
+        from app.recommendation_engine import generate_personalised_recommendations
+
+        # Analyse the student's existing rubric feedback
+        result = get_student_knowledge_gaps(
+            "data/rubric_feedback.json",
+            student_id
+        )
+
+        # Turn the identified gaps into personalised recommendations
+        recommendations = generate_personalised_recommendations(
+            result["knowledge_gaps"]
+        )
+
+        return jsonify({
+            "data": {
+                "student_id": student_id,
+                "recommendations": recommendations,
+                "count": len(recommendations)
+            }
+        }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
+    
+@api.route("/students/<string:student_id>/ai-recommendations", methods=["GET"])
+def get_ai_recommendations(student_id):
+    """
+    Generate LLM-powered personalised learning recommendations
+    using the student's identified knowledge gaps.
+    """
+    try:
+        from app.feedback_analyzer import get_student_knowledge_gaps
+        from app.llm_service import generate_student_ai_recommendations
+
+        result = get_student_knowledge_gaps(
+            "data/rubric_feedback.json",
+            student_id
+        )
+
+        recommendations = generate_student_ai_recommendations(
+            result["knowledge_gaps"]
+        )
+
+        return jsonify({
+            "data": {
+                "student_id": student_id,
+                "recommendations": recommendations,
+                "count": len(recommendations)
+            }
+        }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
+    
