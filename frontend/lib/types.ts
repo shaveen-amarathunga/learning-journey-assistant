@@ -122,3 +122,21 @@ export interface QuizResult {
   masteryAfter: number;
   review: { question: QuizQuestion; chosenKey: string }[];
 }
+
+// ---------------------------------------------------------------------------
+// NLP / KNOWLEDGE GAP ANALYSIS
+// ---------------------------------------------------------------------------
+
+export interface KnowledgeGap {
+  lo_code: string;
+  knowledge_gap: string;
+  recommendation: string;
+  feedback: string;
+  score: number;
+}
+
+export interface KnowledgeGapAnalysis {
+  student_id: string;
+  feedback_records_analysed: number;
+  knowledge_gaps: KnowledgeGap[];
+}

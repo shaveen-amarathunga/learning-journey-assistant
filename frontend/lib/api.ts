@@ -4,6 +4,7 @@ import { deriveStrategies } from "./strategies";
 import type {
   DashboardData,
   FeedbackItem,
+  KnowledgeGapAnalysis,
   LearningOutcome,
   LearningPlan,
   OutcomeDetail,
@@ -712,4 +713,20 @@ export async function submitQuiz(
 
     review: wrong,
   };
+}
+
+// ---------------------------------------------------------------------------
+// NLP / KNOWLEDGE GAP ANALYSIS
+// ---------------------------------------------------------------------------
+
+/**
+ * Fetch NLP-identified knowledge gaps from the backend.
+ *
+ * The backend analyses assessment feedback and identifies
+ * areas where the student may need additional study.
+ */
+export async function fetchKnowledgeGaps(): Promise<KnowledgeGapAnalysis> {
+  return getJson<KnowledgeGapAnalysis>(
+    `/students/${DEMO_STUDENT_ID}/knowledge-gaps`,
+  );
 }
