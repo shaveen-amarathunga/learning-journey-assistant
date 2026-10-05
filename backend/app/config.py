@@ -13,6 +13,13 @@ class Config:
     # Flask settings
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret-change-in-production")
 
+    # JWT settings
+    JWT_SECRET_KEY = os.environ.get(
+        "JWT_SECRET_KEY",
+        "learning-journey-dev-jwt-secret-change-in-production"
+    )
+    JWT_ACCESS_TOKEN_EXPIRES = 3600
+
     # Database — SQLite file stored in the project root
     SQLALCHEMY_DATABASE_URI = f"sqlite:///{BASE_DIR / 'database.db'}"
     SQLALCHEMY_TRACK_MODIFICATIONS = False

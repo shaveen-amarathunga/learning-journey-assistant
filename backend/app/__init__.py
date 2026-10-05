@@ -5,6 +5,7 @@ Creating the app inside a function keeps configuration flexible
 """
 from flask import Flask, jsonify
 from flask_cors import CORS
+from flask_jwt_extended import JWTManager
 
 from app.config import Config
 from app.models import db
@@ -14,6 +15,8 @@ def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
 
+    JWTManager(app)
+
     # Allow the frontend (running on a different port) to call our API
     CORS(app)
 
@@ -22,7 +25,10 @@ def create_app(config_class=Config):
 
     # Register API routes (Blueprint from app/routes.py)
     from app.routes import api
+    from app.auth import auth
+
     app.register_blueprint(api)
+    app.register_blueprint(auth)
 
     # ---- Root route (outside the /api prefix) ----
     @app.route("/")

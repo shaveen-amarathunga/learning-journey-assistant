@@ -11,6 +11,7 @@ Six tables model the flow from raw Moodle data → mastery scores:
 """
 from datetime import datetime
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import check_password_hash, generate_password_hash
 
 # Single database instance shared across the app
 db = SQLAlchemy()
@@ -25,11 +26,18 @@ class Student(db.Model):
     id = db.Column(db.String(20), primary_key=True)      # e.g. "S001"
     name = db.Column(db.String(100), nullable=False)
     email = db.Column(db.String(120), unique=True, nullable=False)
+    password_hash = db.Column(db.String(255), nullable=False)
     enrolled_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships (back-populated)
     feedback = db.relationship("RubricFeedback", back_populates="student", cascade="all, delete-orphan")
     mastery_scores = db.relationship("MasteryScore", back_populates="student", cascade="all, delete-orphan")
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+    
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
 
     def to_dict(self):
         return {
