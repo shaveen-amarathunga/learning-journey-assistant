@@ -64,9 +64,9 @@ export default function Dashboard({ session, onLogout }: { session: Session; onL
   return (
     <div className="flex flex-1 flex-col">
       <header className="border-b border-line bg-surface">
-        <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-4 py-4">
-          <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
+        <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-4">
+          <div className="flex min-w-0 items-center gap-3">
+            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-indigo-600 text-sm font-bold text-white">
               LJ
             </div>
             <div>
@@ -78,7 +78,7 @@ export default function Dashboard({ session, onLogout }: { session: Session; onL
             <span className="hidden text-sm sm:inline">
               {name} <span className="text-muted">· {studentId}</span>
             </span>
-            <button onClick={onLogout} className="btn-secondary">
+            <button onClick={onLogout} className="btn-secondary shrink-0 whitespace-nowrap">
               Sign out
             </button>
           </div>
@@ -145,7 +145,7 @@ function DashboardBody({ data, studentId, name }: { data: Data; studentId: strin
         <p className="mt-1 text-sm text-muted">Here&apos;s where you stand across your learning outcomes.</p>
       </section>
 
-      <section className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+      <section className="grid grid-cols-1 gap-3 min-[360px]:grid-cols-2 sm:grid-cols-4">
         <Stat label="Average mastery" value={`${average.toFixed(0)}%`} />
         <Stat label="Learning outcomes" value={String(outcomes.length)} />
         <Stat label="Feedback received" value={String(feedback.length)} />
@@ -159,8 +159,8 @@ function DashboardBody({ data, studentId, name }: { data: Data; studentId: strin
             const b = band(o.score);
             return (
               <li key={o.lo_code}>
-                <div className="mb-1 flex items-baseline justify-between gap-3">
-                  <p className="text-sm">
+                <div className="mb-1 flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                  <p className="min-w-0 text-sm">
                     <span className="font-semibold">{o.lo_code}</span>
                     <span className="text-muted"> — {o.description}</span>
                   </p>
@@ -189,7 +189,7 @@ function DashboardBody({ data, studentId, name }: { data: Data; studentId: strin
               {uniqueGaps.map((g) => (
                 <li key={`${g.lo_code}-${g.knowledge_gap}`} className="rounded-lg border border-line p-3">
                   <div className="mb-1 flex items-center justify-between gap-2">
-                    <p className="text-sm font-medium">{g.knowledge_gap}</p>
+                    <p className="min-w-0 text-sm font-medium">{g.knowledge_gap}</p>
                     <span className="rounded bg-track px-1.5 py-0.5 text-xs font-medium">{g.lo_code}</span>
                   </div>
                   <p className="text-sm text-muted">{g.recommendation}</p>
@@ -217,9 +217,9 @@ function Stat({ label, value, hint }: { label: string; value: string; hint?: str
   return (
     <div className="card p-4">
       <p className="text-xs text-muted">{label}</p>
-      <p className="mt-1 text-2xl font-semibold tabular-nums">
+      <p className="mt-1 flex flex-wrap items-baseline gap-x-1.5 text-2xl font-semibold tabular-nums">
         {value}
-        {hint && <span className="ml-1.5 text-sm font-normal text-muted">{hint}</span>}
+        {hint && <span className="text-sm font-normal text-muted">{hint}</span>}
       </p>
     </div>
   );
@@ -320,15 +320,15 @@ function FeedbackHistory({ feedback, subject }: { feedback: Feedback[]; subject:
     <div className="space-y-6">
       {groups.map((g) => (
         <div key={g.id}>
-          <div className="mb-2 flex items-baseline justify-between gap-3">
-            <h3 className="text-sm font-semibold">{g.title}</h3>
+          <div className="mb-2 flex flex-wrap items-baseline justify-between gap-x-3">
+            <h3 className="min-w-0 text-sm font-semibold">{g.title}</h3>
             <span className="shrink-0 text-xs text-muted">{formatDate(g.date)}</span>
           </div>
           <ul className="divide-y divide-line rounded-lg border border-line">
             {g.items.map((f) => (
               <li key={f.id} className="flex gap-3 p-3 text-sm">
                 <span className="w-10 shrink-0 font-medium">{f.lo_code}</span>
-                <p className="flex-1 text-muted">{f.comment}</p>
+                <p className="min-w-0 flex-1 text-muted">{f.comment}</p>
                 <span className={`shrink-0 font-semibold tabular-nums ${band(f.score).text}`}>
                   {f.score.toFixed(0)}
                 </span>

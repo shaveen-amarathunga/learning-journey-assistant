@@ -27,7 +27,17 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col">
+        <noscript>
+          <div className="mx-auto max-w-md px-4 py-20 text-center">
+            <h1 className="text-xl font-semibold">Learning Journey Assistant</h1>
+            <p className="mt-3 text-sm">
+              Please enable JavaScript in your browser to use this app, then reload the page.
+            </p>
+          </div>
+        </noscript>
+        {children}
+      </body>
     </html>
   );
 }

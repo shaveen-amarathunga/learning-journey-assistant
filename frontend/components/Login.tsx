@@ -47,7 +47,7 @@ export default function Login({ onLogin }: { onLogin: (s: Session) => void }) {
     <main className="flex flex-1 items-center justify-center px-4 py-12">
       <div className="w-full max-w-sm">
         <div className="mb-8 text-center">
-          <div className="mx-auto mb-4 flex h-12 w-12 items-center justify-center rounded-xl bg-indigo-600 text-xl font-bold text-white">
+          <div className="mx-auto mb-4 flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-indigo-600 text-xl font-bold text-white">
             LJ
           </div>
           <h1 className="text-2xl font-semibold tracking-tight">Learning Journey Assistant</h1>
