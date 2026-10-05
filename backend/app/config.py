@@ -28,4 +28,4 @@ class Config:
     MOCK_MOODLE_DATA_DIR = BASE_DIR / "data"
 
     # Debug mode for development
-    DEBUG = True
+    DEBUG = os.environ.get("FLASK_DEBUG", "1") == "1"

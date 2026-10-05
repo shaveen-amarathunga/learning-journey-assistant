@@ -325,6 +325,8 @@ def get_knowledge_gaps(student_id):
     """
 
     try:
+        from app.feedback_analyzer import get_student_knowledge_gaps
+
         result = get_student_knowledge_gaps(
             "data/rubric_feedback.json",
             student_id

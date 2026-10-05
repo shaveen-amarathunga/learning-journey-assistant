@@ -8,4 +8,5 @@ python-dotenv==1.0.0
 requests==2.31.0
 Faker==22.0.0
 pytest==8.0.0
-Flask-JWT-Extended==4.7.1
+groq
+gunicorn==23.0.0

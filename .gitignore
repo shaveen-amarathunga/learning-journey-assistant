@@ -6,3 +6,9 @@ backend/venv/
 # Environment variables
 backend/.env
 
+
+__pycache__/
+*.pyc
+.pytest_cache/
+frontend/node_modules/
+frontend/.next/
