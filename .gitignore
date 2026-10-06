@@ -9,3 +9,5 @@ __pycache__/
 
 # Environment variables / secrets
 backend/.env
+# Local SQLite database (created by scripts/seed_db.py)
+backend/database.db
