@@ -36,7 +36,7 @@ export default function TrendsPage() {
     <div className="space-y-6">
       <BackHeader
         title="Progress trends"
-        subtitle="CSE3CAP · across your assessments this semester"
+        subtitle="CSE3CAP · across your assessments and practice quizzes"
       />
 
       <Card className="space-y-4">
@@ -69,8 +69,8 @@ export default function TrendsPage() {
         </div>
 
         <Disclaimer>
-          Trend history is indicative until assessment-level history is
-          available.
+          Each point is your formative mastery after a marked assessment or a
+          completed practice quiz — not an official grade.
         </Disclaimer>
       </Card>
 

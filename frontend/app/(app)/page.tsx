@@ -13,6 +13,7 @@ import { MasteryBar } from "@/components/ui/MasteryBar";
 import { Spinner, ErrorState } from "@/components/ui/PageState";
 import { FocusPanel } from "@/components/FocusPanel";
 import { StrengthsPanel } from "@/components/StrengthsPanel";
+import { SkillGapsPanel } from "@/components/SkillGapsPanel";
 import { Disclaimer } from "@/components/ui/Disclaimer";
 import { ChevronRightIcon, MessageSquareIcon } from "@/components/ui/icons";
 
@@ -103,6 +104,9 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
 
           {/* Your strengths */}
           <StrengthsPanel strengths={strengths} />
+
+          {/* Skill gaps found in feedback */}
+          <SkillGapsPanel />
         </Card>
 
         {/* Right card — mastery & feedback */}

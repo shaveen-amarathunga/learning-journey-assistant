@@ -8,16 +8,22 @@ import { Button } from "@/components/ui/Button";
 export default function LoginPage() {
   const router = useRouter();
   const [email, setEmail] = useState("aisha.khan@students.latrobe.edu.au");
-  const [password, setPassword] = useState("password");
+  const [password, setPassword] = useState("");
   const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
 
-  function handleSubmit(event: React.FormEvent) {
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!email.trim()) return;
+    if (!email.trim() || !password) return;
     setSubmitting(true);
-    // Prototype: no real auth call yet — see lib/auth.ts.
-    signIn(email.trim());
-    router.push("/");
+    setError("");
+    try {
+      await signIn(email.trim(), password);
+      router.push("/");
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Sign in failed.");
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -68,6 +74,12 @@ export default function LoginPage() {
             </label>
           </div>
 
+          {error && (
+            <p role="alert" className="mt-4 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+
           <Button
             type="submit"
             size="lg"
@@ -88,7 +100,8 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-xs text-muted">
-          Prototype — any email signs you in as the demo student.
+          Demo accounts: any student email (e.g. aisha.khan@students.latrobe.edu.au)
+          with the password <span className="font-mono">password123</span>.
         </p>
       </div>
     </main>

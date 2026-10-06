@@ -14,7 +14,15 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        <noscript>
+          <p style={{ padding: "4rem 1.5rem", textAlign: "center" }}>
+            Please enable JavaScript in your browser to use the Learning Journey
+            Assistant, then reload the page.
+          </p>
+        </noscript>
+        {children}
+      </body>
     </html>
   );
 }

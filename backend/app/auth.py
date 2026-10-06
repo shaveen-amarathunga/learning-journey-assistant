@@ -10,12 +10,17 @@ auth = Blueprint("auth", __name__, url_prefix="/api/auth")
 def login():
     body = request.get_json(silent=True)
 
-    if not body or "student_id" not in body or "password" not in body:
+    # Students can sign in with either their student ID or their email.
+    identifier = (body or {}).get("student_id") or (body or {}).get("email")
+
+    if not identifier or "password" not in body:
         return jsonify({
-            "error": "student_id and password are required"
+            "error": "student_id (or email) and password are required"
         }), 400
 
-    student = db.session.get(Student, body["student_id"])
+    student = db.session.get(Student, identifier) or Student.query.filter(
+        db.func.lower(Student.email) == str(identifier).strip().lower()
+    ).first()
 
     if not student or not student.check_password(body["password"]):
         return jsonify({

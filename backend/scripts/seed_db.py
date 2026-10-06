@@ -18,6 +18,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from app import create_app
+from app.mastery_calculator import calculate_mastery_for_all_students
 from app.models import (
     db,
     Student,
@@ -164,6 +165,10 @@ def main():
         seed_rubric_feedback(lo_code_to_id)
 
         db.session.commit()
+
+        # Mastery is derived from the feedback, so compute it straight away
+        # (otherwise the dashboard is empty until a recalculation is run).
+        calculate_mastery_for_all_students()
 
         print("\n✅ Database seeded successfully!\n")
 

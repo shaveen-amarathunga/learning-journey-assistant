@@ -27,5 +27,5 @@ class Config:
     # Path where mock Moodle data lives
     MOCK_MOODLE_DATA_DIR = BASE_DIR / "data"
 
-    # Debug mode for development
-    DEBUG = True
+    # Debug mode for development (set FLASK_DEBUG=0 in production)
+    DEBUG = os.environ.get("FLASK_DEBUG", "1") == "1"

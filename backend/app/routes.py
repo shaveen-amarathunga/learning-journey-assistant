@@ -12,6 +12,8 @@ Endpoint conventions:
   - Error:    4xx/5xx with {"error": "message"}
 """
 
+from datetime import datetime
+
 from flask import Blueprint, jsonify, request
 from sqlalchemy.exc import SQLAlchemyError
 
@@ -28,6 +30,7 @@ from app.models import (
 from app.mastery_calculator import (
     calculate_mastery_for_student,
     calculate_mastery_for_all_students,
+    weighted_mastery,
 )
 from app.moodle_client import get_moodle_client
 from app.authorization import require_self
@@ -606,6 +609,194 @@ def create_quiz_attempt(student_id):
         return jsonify({
             "error": f"Database error: {str(error)}"
         }), 500
+
+
+# ===========================================================================
+# MASTERY HISTORY (PROGRESS TRENDS)
+# ===========================================================================
+
+@api.route(
+    "/students/<string:student_id>/mastery/history",
+    methods=["GET"]
+)
+@require_self()
+def get_mastery_history(student_id):
+    """
+    Real progress over time for each learning outcome.
+
+    One point after each marked assessment (mastery calculated from the
+    feedback received up to that assessment), then one point after each
+    completed quiz.
+    """
+
+    student = db.session.get(
+        Student,
+        student_id
+    )
+
+    if not student:
+        return jsonify({
+            "error": "Student not found"
+        }), 404
+
+    feedback_rows = (
+        db.session.query(RubricFeedback, Assessment, LearningOutcome)
+        .join(Assessment, RubricFeedback.assessment_id == Assessment.id)
+        .join(LearningOutcome, RubricFeedback.lo_id == LearningOutcome.id)
+        .filter(RubricFeedback.student_id == student_id)
+        .all()
+    )
+
+    attempts = (
+        QuizAttempt.query.filter_by(student_id=student_id)
+        .order_by(QuizAttempt.completed_at)
+        .all()
+    )
+
+    outcomes = {}
+
+    for feedback, assessment, lo in feedback_rows:
+        entry = outcomes.setdefault(lo.id, {
+            "lo_code": lo.lo_code,
+            "lo_description": lo.description,
+            "feedback": [],
+        })
+        entry["feedback"].append((
+            assessment.due_date or feedback.created_at or datetime.min,
+            assessment,
+            feedback.score,
+        ))
+
+    history = []
+
+    for lo_id, entry in outcomes.items():
+        entry["feedback"].sort(key=lambda item: item[0])
+        points = []
+
+        for index, (when, assessment, _) in enumerate(entry["feedback"]):
+            scores_so_far = [item[2] for item in entry["feedback"][: index + 1]]
+            points.append({
+                "label": f"Assessment {index + 1}",
+                "title": assessment.title,
+                "kind": "assessment",
+                "date": when.isoformat() if when != datetime.min else None,
+                "value": weighted_mastery(list(reversed(scores_so_far))),
+            })
+
+        quiz_number = 0
+        for attempt in attempts:
+            if attempt.lo_id != lo_id:
+                continue
+            quiz_number += 1
+            points.append({
+                "label": f"Quiz {quiz_number}",
+                "title": f"Practice quiz ({attempt.score}/{attempt.total_questions} correct)",
+                "kind": "quiz",
+                "date": attempt.completed_at.isoformat() if attempt.completed_at else None,
+                "value": round(attempt.mastery_after, 1),
+            })
+
+        history.append({
+            "lo_code": entry["lo_code"],
+            "lo_description": entry["lo_description"],
+            "points": points,
+        })
+
+    history.sort(key=lambda item: item["lo_code"])
+
+    return jsonify({
+        "data": history,
+        "student_id": student_id,
+    }), 200
+
+
+# ===========================================================================
+# ADAPTIVE QUIZ
+# ===========================================================================
+
+@api.route(
+    "/students/<string:student_id>/quiz",
+    methods=["GET"]
+)
+@require_self()
+def get_adaptive_quiz(student_id):
+    """
+    Generate a practice quiz for one learning outcome (?lo_code=LO1).
+
+    Questions are written by the LLM, grounded in the learning outcome,
+    the student's own feedback and knowledge gaps, and the difficulty
+    adapts to their current mastery.
+    """
+
+    lo_code = (request.args.get("lo_code") or "").upper()
+
+    if not lo_code:
+        return jsonify({
+            "error": "lo_code is required"
+        }), 400
+
+    lo = LearningOutcome.query.filter_by(
+        lo_code=lo_code
+    ).first()
+
+    if not lo:
+        return jsonify({
+            "error": "Learning outcome not found"
+        }), 404
+
+    mastery = MasteryScore.query.filter_by(
+        student_id=student_id,
+        lo_id=lo.id
+    ).first()
+
+    feedback = (
+        RubricFeedback.query.filter_by(student_id=student_id, lo_id=lo.id)
+        .order_by(RubricFeedback.created_at.desc())
+        .all()
+    )
+
+    try:
+        gaps = get_student_knowledge_gaps(
+            "data/rubric_feedback.json",
+            student_id
+        )["knowledge_gaps"]
+    except Exception:
+        gaps = []
+
+    gap_names = sorted({
+        gap["knowledge_gap"]
+        for gap in gaps
+        if gap["lo_code"] == lo_code
+    })
+
+    try:
+        from app.llm_service import generate_adaptive_quiz
+
+        quiz = generate_adaptive_quiz({
+            "subject_name": lo.subject.name if lo.subject else "",
+            "lo_code": lo.lo_code,
+            "lo_description": lo.description,
+            "mastery": round(mastery.score, 1) if mastery else 0,
+            "feedback": [item.comment for item in feedback if item.comment],
+            "knowledge_gaps": gap_names,
+        })
+
+    except Exception as error:
+        return jsonify({
+            "error": f"Could not generate an AI quiz right now: {error}"
+        }), 503
+
+    return jsonify({
+        "data": {
+            "lo_code": lo.lo_code,
+            "lo_description": lo.description,
+            "mastery": round(mastery.score, 1) if mastery else 0,
+            "difficulty": quiz["difficulty"],
+            "focus_areas": gap_names,
+            "questions": quiz["questions"],
+            "source": "ai",
+        }
+    }), 200
 
 
 # ===========================================================================

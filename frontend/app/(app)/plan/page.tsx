@@ -9,6 +9,7 @@ import { cn } from "@/lib/cn";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { BackHeader } from "@/components/BackHeader";
+import { AiStudyPlan } from "@/components/AiStudyPlan";
 import { Spinner } from "@/components/ui/PageState";
 import { CheckIcon, RefreshIcon } from "@/components/ui/icons";
 
@@ -99,6 +100,8 @@ export default function LearningPlanPage() {
           {regenerating ? "Regenerating…" : "Regenerate plan"}
         </Button>
       </Card>
+
+      <AiStudyPlan />
     </div>
   );
 }

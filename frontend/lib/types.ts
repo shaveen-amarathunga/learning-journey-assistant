@@ -103,6 +103,7 @@ export interface QuizQuestion {
   options: QuizOption[];
   correctKey: string;
   reviewLabel: string; // short label used on the results screen
+  explanation?: string; // why the correct answer is right (AI quizzes)
 }
 
 export interface Quiz {
@@ -111,6 +112,9 @@ export interface Quiz {
   outcomeName: string;
   questions: QuizQuestion[];
   masteryBefore: number;
+  source: "ai" | "sample"; // AI-generated, or the general fallback questions
+  difficulty?: "foundational" | "intermediate" | "advanced";
+  focusAreas?: string[]; // knowledge gaps the questions target
 }
 
 export interface QuizResult {
@@ -139,4 +143,19 @@ export interface KnowledgeGapAnalysis {
   student_id: string;
   feedback_records_analysed: number;
   knowledge_gaps: KnowledgeGap[];
+}
+// ---------------------------------------------------------------------------
+// AI STUDY PLAN
+// ---------------------------------------------------------------------------
+
+export interface AiPlanDetails {
+  explanation?: string;
+  learning_activities?: string[];
+  practical_exercise?: string;
+  study_priority?: string;
+  error?: string;
+}
+
+export interface AiGapPlan extends KnowledgeGap {
+  ai_recommendation: AiPlanDetails;
 }

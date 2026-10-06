@@ -1,7 +1,14 @@
 import json
 import re
 
-from sentence_transformers import SentenceTransformer, util
+# sentence-transformers (and PyTorch) is optional. It needs far more memory
+# than small hosting plans provide, so when it isn't installed we fall back
+# to the keyword rules only.
+try:
+    from sentence_transformers import SentenceTransformer, util
+except ImportError:
+    SentenceTransformer = None
+    util = None
 
 
 # Lightweight semantic model used to understand feedback
@@ -11,6 +18,9 @@ _semantic_model = None
 
 def get_semantic_model():
     global _semantic_model
+
+    if SentenceTransformer is None:
+        return None
 
     if _semantic_model is None:
         _semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
@@ -124,6 +134,12 @@ def identify_semantic_knowledge_gap(comment: str, lo_code: str) -> dict:
         }
 
     model = get_semantic_model()
+
+    if model is None:
+        return {
+            "knowledge_gap": "No specific knowledge gap identified",
+            "recommendation": "Review the feedback and relevant learning outcome."
+        }
 
     descriptions = [
         candidate[0]

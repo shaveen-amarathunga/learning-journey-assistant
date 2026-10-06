@@ -24,6 +24,17 @@ from app.models import db, LearningOutcome, RubricFeedback, MasteryScore
 OLDER_ASSESSMENT_WEIGHT = 0.7
 
 
+def weighted_mastery(scores_newest_first: list) -> float:
+    """Weighted average where the newest score counts 1.0 and older ones 0.7."""
+    weighted_sum = 0.0
+    weight_total = 0.0
+    for i, score in enumerate(scores_newest_first):
+        weight = 1.0 if i == 0 else OLDER_ASSESSMENT_WEIGHT
+        weighted_sum += score * weight
+        weight_total += weight
+    return round(weighted_sum / weight_total, 1) if weight_total > 0 else 0.0
+
+
 def calculate_mastery_for_student(student_id: str) -> dict:
     """Compute mastery scores per LO for a student, save to DB, return summary.
 
@@ -66,14 +77,7 @@ def calculate_mastery_for_student(student_id: str) -> dict:
         records.sort(key=lambda r: r["date"], reverse=True)
 
         # Apply weights: newest = 1.0, all others = OLDER_ASSESSMENT_WEIGHT
-        weighted_sum = 0.0
-        weight_total = 0.0
-        for i, rec in enumerate(records):
-            weight = 1.0 if i == 0 else OLDER_ASSESSMENT_WEIGHT
-            weighted_sum += rec["score"] * weight
-            weight_total += weight
-
-        final_score = round(weighted_sum / weight_total, 1) if weight_total > 0 else 0.0
+        final_score = weighted_mastery([rec["score"] for rec in records])
         computed_scores.append({
             "lo_id": lo_id,
             "lo_code": records[0]["lo_code"],

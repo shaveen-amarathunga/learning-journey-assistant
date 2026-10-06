@@ -1,7 +1,9 @@
 import * as mock from "./mock-data";
+import { API_BASE_URL, getSession, signOut } from "./auth";
 import { reflectionSteps } from "./reflections";
 import { deriveStrategies } from "./strategies";
 import type {
+  AiGapPlan,
   DashboardData,
   FeedbackItem,
   KnowledgeGapAnalysis,
@@ -22,12 +24,23 @@ import type {
 // Every screen talks to the backend through this module only.
 // ---------------------------------------------------------------------------
 
-export const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:5001/api";
+export { API_BASE_URL };
 
-// TODO: derive these from authenticated session later.
-const DEMO_STUDENT_ID = "S001";
 const DEMO_SUBJECT_CODE = "CSE3CAP";
+
+/** The signed-in student's ID (from the login session). */
+function currentStudentId(): string {
+  const session = getSession();
+  if (!session) {
+    throw new Error("Not signed in");
+  }
+  return session.studentId;
+}
+
+function authHeaders(): Record<string, string> {
+  const session = getSession();
+  return session ? { Authorization: `Bearer ${session.token}` } : {};
+}
 
 const LATENCY_MS = 350;
 
@@ -106,7 +119,14 @@ interface RawQuizAttempt {
  * and return only the data property.
  */
 async function getJson<T>(path: string): Promise<T> {
-  const res = await fetch(`${API_BASE_URL}${path}`);
+  const res = await fetch(`${API_BASE_URL}${path}`, {
+    headers: authHeaders(),
+  });
+
+  // Expired or invalid login: send the student back to the sign-in screen.
+  if (res.status === 401 || res.status === 422) {
+    signOut();
+  }
 
   if (!res.ok) {
     throw new Error(`Request failed (${res.status}) for ${path}`);
@@ -169,7 +189,7 @@ function mapFeedback(
 
 export async function fetchStudent(): Promise<Student> {
   const [studentData, subjectData] = await Promise.all([
-    getJson<RawStudent>(`/students/${DEMO_STUDENT_ID}`),
+    getJson<RawStudent>(`/students/${currentStudentId()}`),
     getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
   ]);
 
@@ -195,14 +215,14 @@ export async function fetchDashboard(): Promise<DashboardData> {
     subjectData,
     quizAttempts,
   ] = await Promise.all([
-    getJson<RawStudent>(`/students/${DEMO_STUDENT_ID}`),
+    getJson<RawStudent>(`/students/${currentStudentId()}`),
 
     getJson<RawMasteryScore[]>(
-      `/students/${DEMO_STUDENT_ID}/mastery`,
+      `/students/${currentStudentId()}/mastery`,
     ),
 
     getJson<RawFeedback[]>(
-      `/students/${DEMO_STUDENT_ID}/feedback`,
+      `/students/${currentStudentId()}/feedback`,
     ),
 
     getJson<RawSubject>(
@@ -210,7 +230,7 @@ export async function fetchDashboard(): Promise<DashboardData> {
     ),
 
     getJson<RawQuizAttempt[]>(
-      `/students/${DEMO_STUDENT_ID}/quiz-attempts`,
+      `/students/${currentStudentId()}/quiz-attempts`,
     ),
   ]);
 
@@ -296,11 +316,11 @@ export async function fetchOutcomeDetail(
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
+        `/students/${currentStudentId()}/mastery`,
       ),
 
       getJson<RawFeedback[]>(
-        `/students/${DEMO_STUDENT_ID}/feedback?lo_code=${encodeURIComponent(
+        `/students/${currentStudentId()}/feedback?lo_code=${encodeURIComponent(
           loCode,
         )}`,
       ),
@@ -391,11 +411,11 @@ async function buildLearningPlan(): Promise<LearningPlan> {
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
+        `/students/${currentStudentId()}/mastery`,
       ),
 
       getJson<RawFeedback[]>(
-        `/students/${DEMO_STUDENT_ID}/feedback`,
+        `/students/${currentStudentId()}/feedback`,
       ),
     ]);
 
@@ -476,74 +496,43 @@ export async function regenerateLearningPlan(): Promise<LearningPlan> {
 // TRENDS
 // ---------------------------------------------------------------------------
 
-const clampPct = (n: number) =>
-  Math.max(0, Math.min(100, Math.round(n)));
+interface RawHistoryPoint {
+  label: string;
+  title: string;
+  kind: "assessment" | "quiz";
+  date: string | null;
+  value: number;
+}
 
+interface RawOutcomeHistory {
+  lo_code: string;
+  lo_description: string;
+  points: RawHistoryPoint[];
+}
+
+/**
+ * Real progress for each outcome: mastery after each marked assessment,
+ * then after each completed quiz.
+ */
 export async function fetchTrends(): Promise<OutcomeTrend[]> {
-  const [subjectData, masteryData] =
-    await Promise.all([
-      getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
-      ),
-
-      getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
-      ),
-    ]);
-
-  const nameByCode = new Map(
-    subjectData.learning_outcomes.map((lo) => [
-      lo.lo_code.toUpperCase(),
-      lo.description,
-    ]),
+  const history = await getJson<RawOutcomeHistory[]>(
+    `/students/${currentStudentId()}/mastery/history`,
   );
 
-  return masteryData.map((mastery) => {
-    const code =
-      (mastery.lo_code ?? "").toUpperCase();
-
-    const current = clampPct(mastery.score);
-
-    const rising = current >= 78;
-
-    const step1 = rising
-      ? clampPct(
-          current -
-            Math.max(2, current * 0.05),
-        )
-      : current;
-
-    const step0 = clampPct(
-      step1 - Math.max(3, current * 0.06),
-    );
+  return history.map((item) => {
+    const series = item.points.map((point) => ({
+      label: point.label,
+      value: Math.round(point.value),
+    }));
+    const last = series.at(-1)?.value ?? 0;
+    const previous = series.at(-2)?.value ?? last;
 
     return {
-      outcomeId:
-        code.toLowerCase() ||
-        `lo-${mastery.lo_id}`,
-
-      outcomeCode: code || undefined,
-
-      outcomeName:
-        nameByCode.get(code) ?? code,
-
-      series: [
-        {
-          label: "Assessment 1",
-          value: step0,
-        },
-        {
-          label: "Quiz 1",
-          value: step1,
-        },
-        {
-          label: "Quiz 2",
-          value: current,
-        },
-      ],
-
-      deltaSinceLast:
-        current - step1,
+      outcomeId: item.lo_code.toLowerCase(),
+      outcomeCode: item.lo_code,
+      outcomeName: item.lo_description,
+      series,
+      deltaSinceLast: last - previous,
     };
   });
 }
@@ -572,7 +561,7 @@ async function resolveOutcome(
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
+        `/students/${currentStudentId()}/mastery`,
       ),
     ]);
 
@@ -602,12 +591,18 @@ async function resolveOutcome(
 // QUIZ
 // ---------------------------------------------------------------------------
 
+interface RawAdaptiveQuiz {
+  lo_code: string;
+  lo_description: string;
+  mastery: number;
+  difficulty: "foundational" | "intermediate" | "advanced";
+  focus_areas: string[];
+  questions: QuizQuestion[];
+}
+
 export async function fetchQuiz(
   outcomeId: string,
 ): Promise<Quiz | null> {
-  // Questions are still placeholders.
-  // Outcome metadata and mastery are real backend data.
-
   const resolved =
     await resolveOutcome(outcomeId);
 
@@ -615,13 +610,36 @@ export async function fetchQuiz(
     return null;
   }
 
-  return {
-    outcomeId,
-    outcomeCode: resolved.code,
-    outcomeName: resolved.name,
-    masteryBefore: resolved.mastery,
-    questions: mock.genericQuizQuestions,
-  };
+  // Questions are generated by the AI from this outcome, the student's
+  // feedback and knowledge gaps, at a difficulty matched to their mastery.
+  try {
+    const generated = await getJson<RawAdaptiveQuiz>(
+      `/students/${currentStudentId()}/quiz?lo_code=${encodeURIComponent(
+        resolved.code,
+      )}`,
+    );
+
+    return {
+      outcomeId,
+      outcomeCode: resolved.code,
+      outcomeName: resolved.name,
+      masteryBefore: resolved.mastery,
+      questions: generated.questions,
+      source: "ai",
+      difficulty: generated.difficulty,
+      focusAreas: generated.focus_areas,
+    };
+  } catch {
+    // AI unavailable: fall back to the general study-skills questions.
+    return {
+      outcomeId,
+      outcomeCode: resolved.code,
+      outcomeName: resolved.name,
+      masteryBefore: resolved.mastery,
+      questions: mock.genericQuizQuestions,
+      source: "sample",
+    };
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -629,15 +647,9 @@ export async function fetchQuiz(
 // ---------------------------------------------------------------------------
 
 export async function submitQuiz(
-  outcomeId: string,
+  quiz: Quiz,
   answers: Record<string, string>,
 ): Promise<QuizResult> {
-  const resolved =
-    await resolveOutcome(outcomeId);
-
-  const questions =
-    mock.genericQuizQuestions;
-
   const wrong: {
     question: QuizQuestion;
     chosenKey: string;
@@ -645,7 +657,7 @@ export async function submitQuiz(
 
   let correct = 0;
 
-  for (const question of questions) {
+  for (const question of quiz.questions) {
     const chosenKey =
       answers[question.id] ?? "";
 
@@ -661,9 +673,9 @@ export async function submitQuiz(
     }
   }
 
-  const total = questions.length;
+  const total = quiz.questions.length;
 
-  if (!resolved?.code) {
+  if (!quiz.outcomeCode) {
     throw new Error(
       "Could not resolve learning outcome",
     );
@@ -672,16 +684,17 @@ export async function submitQuiz(
   // Save the completed quiz to the backend.
   // Backend also recalculates mastery.
   const response = await fetch(
-    `${API_BASE_URL}/students/${DEMO_STUDENT_ID}/quiz-attempts`,
+    `${API_BASE_URL}/students/${currentStudentId()}/quiz-attempts`,
     {
       method: "POST",
 
       headers: {
         "Content-Type": "application/json",
+        ...authHeaders(),
       },
 
       body: JSON.stringify({
-        lo_code: resolved.code,
+        lo_code: quiz.outcomeCode,
         score: correct,
         total_questions: total,
       }),
@@ -699,17 +712,17 @@ export async function submitQuiz(
   const attempt = result.data;
 
   return {
-    outcomeCode: resolved.code,
-    outcomeName: resolved.name,
+    outcomeCode: quiz.outcomeCode,
+    outcomeName: quiz.outcomeName,
     correct,
     total,
 
     // These now come directly from the backend.
     masteryBefore:
-      attempt.mastery_before,
+      Math.round(attempt.mastery_before),
 
     masteryAfter:
-      attempt.mastery_after,
+      Math.round(attempt.mastery_after),
 
     review: wrong,
   };
@@ -727,6 +740,28 @@ export async function submitQuiz(
  */
 export async function fetchKnowledgeGaps(): Promise<KnowledgeGapAnalysis> {
   return getJson<KnowledgeGapAnalysis>(
-    `/students/${DEMO_STUDENT_ID}/knowledge-gaps`,
+    `/students/${currentStudentId()}/knowledge-gaps`,
   );
+}
+// ---------------------------------------------------------------------------
+// AI STUDY PLAN (LLM)
+// ---------------------------------------------------------------------------
+
+/**
+ * Ask the AI for a personalised study plan for each knowledge gap.
+ * Can take several seconds.
+ */
+export async function fetchAiStudyPlan(): Promise<AiGapPlan[]> {
+  const data = await getJson<{ recommendations: AiGapPlan[] }>(
+    `/students/${currentStudentId()}/ai-recommendations`,
+  );
+
+  // The analyser can report the same gap twice; keep one plan per gap.
+  const seen = new Set<string>();
+  return data.recommendations.filter((item) => {
+    const key = `${item.lo_code}|${item.knowledge_gap}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
 }

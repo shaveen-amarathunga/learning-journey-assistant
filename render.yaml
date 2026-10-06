@@ -1,0 +1,34 @@
+# Render deployment (Blueprint). Free plan: the API sleeps when idle and the
+# SQLite database is re-seeded from backend/data on every deploy.
+services:
+  - type: web
+    name: learning-journey-api
+    runtime: python
+    plan: free
+    rootDir: backend
+    # requirements-base.txt skips sentence-transformers (PyTorch is too large
+    # for the free plan); the feedback analyser falls back to keyword rules.
+    buildCommand: pip install -r requirements-base.txt && python scripts/seed_db.py --reset
+    startCommand: gunicorn "app:create_app()" --bind 0.0.0.0:$PORT --timeout 120
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: FLASK_DEBUG
+        value: "0"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: GROQ_API_KEY
+        sync: false
+
+  - type: web
+    name: learning-journey-app
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: out
+    envVars:
+      - key: NEXT_PUBLIC_API_BASE_URL
+        value: https://learning-journey-api.onrender.com/api

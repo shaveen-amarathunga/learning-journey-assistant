@@ -47,11 +47,21 @@ source venv/bin/activate
 pip install -r requirements.txt
 ```
 
+`requirements.txt` includes `sentence-transformers` (PyTorch, ~1 GB) for semantic
+knowledge-gap detection. To skip it, install `requirements-base.txt` instead — the
+feedback analyser then uses its keyword rules only. The cloud deployment does this.
+
+For the AI features (study plan and adaptive quiz) add your Groq key to `backend/.env`:
+
+```
+GROQ_API_KEY=your_key_here
+```
+
 ## Generate mock data & seed the database
 
 ```bash
 python scripts/mock_moodle_generator.py   # writes JSON fixtures to /data
-python scripts/seed_db.py                 # loads fixtures into database.db
+python scripts/seed_db.py --reset         # loads fixtures into database.db and calculates mastery
 ```
 
 ## Run the server
@@ -68,7 +78,7 @@ Server runs at `http://127.0.0.1:5001`.
 pytest
 ```
 
-33 tests covering models, the mock Moodle client, the mastery calculator, and the API routes.
+Tests cover the models, the mock Moodle client, the mastery calculator, authentication, the API routes, mastery history and the adaptive quiz.
 
 ## API overview
 
@@ -89,6 +99,14 @@ All endpoints are under `/api`. Responses are JSON: `{"data": ...}` on success, 
 | GET | `/api/subjects/<code>` | Subject details incl. LOs and assessments |
 | GET | `/api/moodle/subjects` | Subjects read directly from the Moodle client |
 | GET | `/api/moodle/students/<id>/feedback` | A student's feedback read directly from Moodle |
+| POST | `/api/auth/login` | Sign in with `student_id` or `email` and `password`; returns a JWT |
+| GET | `/api/students/<id>/mastery/history` | Mastery after each assessment and quiz (progress trends) |
+| GET | `/api/students/<id>/quiz?lo_code=LO1` | AI-generated adaptive quiz for one learning outcome |
+| GET/POST | `/api/students/<id>/quiz-attempts` | List or save completed quizzes (saving updates mastery) |
+| GET | `/api/students/<id>/knowledge-gaps` | Skill gaps found in the student's feedback (NLP) |
+| GET | `/api/students/<id>/ai-recommendations` | AI study plan for each knowledge gap |
+
+Student endpoints need the JWT from `/api/auth/login` (`Authorization: Bearer <token>`), and a student can only read their own data.
 
 ## Mastery scoring algorithm (v1)
 
