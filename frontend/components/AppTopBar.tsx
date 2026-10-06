@@ -16,7 +16,7 @@ export function AppTopBar() {
 
   return (
     <header className="mb-8 border-b border-border bg-surface">
-      <div className="mx-auto flex max-w-5xl items-center justify-between gap-4 px-5 py-3 sm:px-8">
+      <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-3 py-3 min-[360px]:px-5 sm:px-8">
         <div className="flex min-w-0 items-center gap-4 sm:gap-6">
           <Link
             href="/"

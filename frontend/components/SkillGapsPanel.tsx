@@ -63,7 +63,7 @@ export function SkillGapsPanel({ outcomeCode }: { outcomeCode?: string }) {
                   <p className="mt-0.5 text-sm text-muted">{g.recommendation}</p>
                   <p className="mt-2 flex items-start gap-2 text-sm text-muted">
                     <QuoteIcon className="mt-0.5 h-3.5 w-3.5 shrink-0 text-neutral-400" />
-                    <span>“{g.feedback}”</span>
+                    <span className="min-w-0">“{g.feedback}”</span>
                   </p>
                 </div>
               ) : (

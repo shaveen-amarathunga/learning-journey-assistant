@@ -156,8 +156,8 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
                     className="flex w-full items-start gap-3 rounded-xl border border-border bg-surface px-4 py-3 text-left hover:bg-neutral-50"
                   >
                     <MessageSquareIcon className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
-                    <span>
-                      <span className="block text-[15px] font-medium text-foreground">
+                    <span className="min-w-0">
+                      <span className="block break-words text-[15px] font-medium text-foreground">
                         {fb.comment}
                       </span>
                       <span className="mt-0.5 block break-words text-sm text-muted">

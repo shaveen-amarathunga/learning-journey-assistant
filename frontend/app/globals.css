@@ -38,6 +38,8 @@ body {
   font-family: var(--font-geist-sans), ui-sans-serif, system-ui, -apple-system,
     "Segoe UI", Roboto, Arial, sans-serif;
   -webkit-font-smoothing: antialiased;
+  /* Break a long word (e.g. an API path in feedback) only when it can't fit. */
+  overflow-wrap: break-word;
 }
 
 /* Consistent focus ring for interactive elements */

@@ -64,7 +64,10 @@ export default function TrendsPage() {
             {active.outcomeName}
           </p>
           <div className="mt-2">
-            <MasteryTrendChart series={active.series} />
+            <MasteryTrendChart
+              series={active.series}
+              label={`${active.outcomeCode ?? active.outcomeName} mastery over time`}
+            />
           </div>
         </div>
 

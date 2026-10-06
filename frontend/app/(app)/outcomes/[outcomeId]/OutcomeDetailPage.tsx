@@ -123,7 +123,7 @@ function OutcomeDetailView({
                 className="flex items-start gap-3 rounded-xl bg-neutral-50 px-4 py-3"
               >
                 <QuoteIcon className="mt-0.5 h-4 w-4 shrink-0 text-neutral-400" />
-                <div>
+                <div className="min-w-0">
                   <p className="text-[15px] font-medium text-foreground">
                     “{fb.comment}”
                   </p>

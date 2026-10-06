@@ -27,7 +27,7 @@ export function BackHeader({
   }
 
   return (
-    <div className="flex items-start gap-3">
+    <div className="flex flex-wrap items-start gap-x-3 gap-y-2">
       <button
         type="button"
         onClick={goBack}
@@ -37,7 +37,7 @@ export function BackHeader({
         <ArrowLeftIcon />
       </button>
 
-      <div className="min-w-0 flex-1">
+      <div className="min-w-[8rem] flex-1">
         <h1 className="truncate text-xl font-semibold text-foreground">
           {title}
         </h1>

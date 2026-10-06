@@ -15,12 +15,25 @@ import type { TrendPoint } from "@/lib/types";
  * Deliberately minimal: no gridlines, no Y axis — the design shows just the
  * line and the assessment labels underneath.
  */
-export function MasteryTrendChart({ series }: { series: TrendPoint[] }) {
+export function MasteryTrendChart({
+  series,
+  label,
+}: {
+  series: TrendPoint[];
+  label: string; // accessible name, e.g. "LO4 mastery over time"
+}) {
+  // Text alternative for screen readers: every point in the line.
+  const description = series
+    .map((point) => `${point.label}: ${point.value}%`)
+    .join(", ");
+
   return (
     <div className="h-44 w-full">
       <ResponsiveContainer width="100%" height="100%">
         <LineChart
           data={series}
+          title={label}
+          desc={description}
           margin={{ top: 12, right: 8, bottom: 4, left: 8 }}
         >
           <YAxis hide domain={[0, 100]} />

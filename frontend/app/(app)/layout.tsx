@@ -46,7 +46,7 @@ export default function AppLayout({
     <>
       <AppTopBar />
       <main
-        className={cn("mx-auto w-full px-5 pb-24 sm:px-8", widthClass)}
+        className={cn("mx-auto w-full px-3 pb-24 min-[360px]:px-5 sm:px-8", widthClass)}
       >
         {children}
       </main>
