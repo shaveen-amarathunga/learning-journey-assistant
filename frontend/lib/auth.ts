@@ -2,49 +2,74 @@
 
 import { useSyncExternalStore } from "react";
 
-// Prototype-only auth. Real authentication happens against the Application
-// Layer's auth service (see design deck, Screen 1). For now we just record a
-// flag in localStorage so the routing/guard flow can be built and demoed.
-
 const KEY = "lja.session";
+
+export interface Session {
+  studentId: string;
+  name: string;
+  accessToken: string;
+}
 
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
 function emit() {
-  for (const l of listeners) l();
+  for (const listener of listeners) {
+    listener();
+  }
 }
 
-export function signIn(email: string): void {
+export function signIn(session: Session): void {
   if (typeof window === "undefined") return;
-  window.localStorage.setItem(KEY, JSON.stringify({ email, at: Date.now() }));
+
+  window.localStorage.setItem(
+    KEY,
+    JSON.stringify(session),
+  );
+
   emit();
 }
 
 export function signOut(): void {
   if (typeof window === "undefined") return;
+
   window.localStorage.removeItem(KEY);
   emit();
 }
 
+export function getSession(): Session | null {
+  if (typeof window === "undefined") return null;
+
+  const stored = window.localStorage.getItem(KEY);
+
+  if (!stored) return null;
+
+  try {
+    return JSON.parse(stored) as Session;
+  } catch {
+    window.localStorage.removeItem(KEY);
+    return null;
+  }
+}
+
+export function getAccessToken(): string | null {
+  return getSession()?.accessToken ?? null;
+}
+
 export function isSignedIn(): boolean {
-  if (typeof window === "undefined") return false;
-  return window.localStorage.getItem(KEY) !== null;
+  return getSession() !== null;
 }
 
 function subscribe(listener: Listener): () => void {
   listeners.add(listener);
   window.addEventListener("storage", listener);
+
   return () => {
     listeners.delete(listener);
     window.removeEventListener("storage", listener);
   };
 }
 
-/**
- * Reactive sign-in state. Uses useSyncExternalStore so the guard can read
- * localStorage without a setState-in-effect, and stays in sync across tabs.
- */
 export function useSession(): boolean {
   return useSyncExternalStore(
     subscribe,

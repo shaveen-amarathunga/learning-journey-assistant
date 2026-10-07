@@ -4,20 +4,61 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { signIn } from "@/lib/auth";
 import { Button } from "@/components/ui/Button";
+import { API_BASE_URL } from "@/lib/api";
+
+interface LoginResponse {
+  access_token: string;
+  student_id: string;
+  name: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
-  const [email, setEmail] = useState("aisha.khan@students.latrobe.edu.au");
-  const [password, setPassword] = useState("password");
-  const [submitting, setSubmitting] = useState(false);
 
-  function handleSubmit(event: React.FormEvent) {
+  const [studentId, setStudentId] = useState("S001");
+  const [password, setPassword] = useState("password123");
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+
+  async function handleSubmit(event: React.FormEvent) {
     event.preventDefault();
-    if (!email.trim()) return;
+
+    if (!studentId.trim() || !password) return;
+
     setSubmitting(true);
-    // Prototype: no real auth call yet — see lib/auth.ts.
-    signIn(email.trim());
-    router.push("/");
+    setError("");
+
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          student_id: studentId.trim(),
+          password,
+        }),
+      });
+
+      if (!response.ok) {
+        setError("Invalid student ID or password.");
+        return;
+      }
+
+      const data = (await response.json()) as LoginResponse;
+
+      signIn({
+        studentId: data.student_id,
+        name: data.name,
+        accessToken: data.access_token,
+      });
+
+      router.push("/");
+    } catch {
+      setError("Unable to connect to the server.");
+    } finally {
+      setSubmitting(false);
+    }
   }
 
   return (
@@ -34,29 +75,37 @@ export default function LoginPage() {
             >
               <span className="h-5 w-5 rounded-[5px] border-2 border-blue-600" />
             </span>
+
             <h1 className="mt-4 text-lg font-semibold text-foreground">
               Learning journey assistant
             </h1>
-            <p className="mt-1 text-sm text-muted">Sign in to see your progress</p>
+
+            <p className="mt-1 text-sm text-muted">
+              Sign in to see your progress
+            </p>
           </div>
 
           <div className="mt-6 space-y-4">
             <label className="block">
               <span className="text-sm font-medium text-foreground">
-                Student email
+                Student ID
               </span>
+
               <input
-                type="email"
+                type="text"
                 autoComplete="username"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={studentId}
+                onChange={(e) => setStudentId(e.target.value)}
                 className="mt-1.5 h-11 w-full rounded-xl border border-border bg-surface px-3 text-[15px] outline-none focus:border-neutral-400"
                 required
               />
             </label>
 
             <label className="block">
-              <span className="text-sm font-medium text-foreground">Password</span>
+              <span className="text-sm font-medium text-foreground">
+                Password
+              </span>
+
               <input
                 type="password"
                 autoComplete="current-password"
@@ -68,6 +117,12 @@ export default function LoginPage() {
             </label>
           </div>
 
+          {error && (
+            <p className="mt-4 text-sm text-red-600">
+              {error}
+            </p>
+          )}
+
           <Button
             type="submit"
             size="lg"
@@ -77,18 +132,10 @@ export default function LoginPage() {
           >
             {submitting ? "Signing in…" : "Sign in"}
           </Button>
-
-          <button
-            type="button"
-            onClick={handleSubmit}
-            className="mt-4 w-full text-center text-sm text-muted hover:text-foreground"
-          >
-            Or continue with La Trobe SSO
-          </button>
         </form>
 
         <p className="mt-4 text-center text-xs text-muted">
-          Prototype — any email signs you in as the demo student.
+          Sign in with your student account.
         </p>
       </div>
     </main>
