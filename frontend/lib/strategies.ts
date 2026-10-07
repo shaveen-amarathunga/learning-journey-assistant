@@ -73,7 +73,7 @@ const THEMES: Theme[] = [
   },
   {
     id: "communication",
-    test: /structure|organis|clarity|present|communicat|format|document|written|report|concise|readab/,
+    test: /structure|organis|clarity|present|communicat|format|written|report|concise|readab/,
     strategies: [
       {
         id: "outline-first",

@@ -105,3 +105,98 @@ def generate_student_ai_recommendations(knowledge_gaps):
         recommendations.append(recommendation)
 
     return recommendations
+
+
+def generate_ai_quiz(quiz_context):
+    """
+    Generate a 5-question multiple-choice quiz for a learning outcome.
+
+    quiz_context should contain:
+    - subject_code
+    - lo_code
+    - lo_description
+    - mastery_score
+    - knowledge_gap
+    - feedback
+    """
+
+    prompt = f"""
+You are an AI learning assistant creating a university practice quiz.
+
+Create exactly 5 multiple-choice questions that test the student's
+understanding of the learning outcome below.
+
+Subject: {quiz_context.get("subject_code", "Not provided")}
+Learning outcome: {quiz_context.get("lo_code", "Not provided")}
+Learning outcome description: {quiz_context.get("lo_description", "Not provided")}
+Current mastery score: {quiz_context.get("mastery_score", "Not provided")}
+Identified knowledge gap: {quiz_context.get("knowledge_gap", "Not provided")}
+Lecturer feedback: {quiz_context.get("feedback", "Not provided")}
+
+Requirements:
+- Questions must directly relate to the learning outcome.
+- When a knowledge gap or lecturer feedback is provided, focus some
+  questions on that weakness.
+- Do not invent course content outside the learning outcome.
+- Use exactly four options: A, B, C and D.
+- There must be exactly one correct answer per question.
+- Keep questions practical and appropriate for a university student.
+- Give every question a short review label.
+
+Return ONLY valid JSON using this exact structure:
+
+{{
+    "questions": [
+        {{
+            "id": "q1",
+            "prompt": "Question text",
+            "options": [
+                {{"key": "A", "text": "Option A"}},
+                {{"key": "B", "text": "Option B"}},
+                {{"key": "C", "text": "Option C"}},
+                {{"key": "D", "text": "Option D"}}
+            ],
+            "correctKey": "A",
+            "reviewLabel": "Short topic label"
+        }}
+    ]
+}}
+"""
+
+    try:
+        response = client.chat.completions.create(
+            model="openai/gpt-oss-20b",
+            messages=[
+                {
+                    "role": "system",
+                    "content": (
+                        "You create accurate university practice quizzes "
+                        "using only the supplied learning context."
+                    ),
+                },
+                {
+                    "role": "user",
+                    "content": prompt,
+                },
+            ],
+            temperature=0.4,
+            response_format={"type": "json_object"},
+        )
+
+        result = json.loads(
+            response.choices[0].message.content
+        )
+
+        questions = result.get("questions", [])
+
+        if len(questions) != 5:
+            raise ValueError(
+                "LLM did not generate exactly 5 questions"
+            )
+
+        return questions
+
+    except Exception as error:
+        return {
+            "error": str(error)
+        }

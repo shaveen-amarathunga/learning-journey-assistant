@@ -48,8 +48,8 @@ export function StudyStrategies({
         ))}
       </ul>
       <p className="mt-2 text-xs text-muted">
-        Matched to your recent feedback — general techniques with strong
-        evidence behind them.
+        Recommendations based on this learning outcome and your recent
+        feedback.
       </p>
     </section>
   );

@@ -13,7 +13,7 @@ def get_semantic_model():
     global _semantic_model
 
     if _semantic_model is None:
-        _semantic_model = SentenceTransformer("all-MiniLM-L6-v2")
+        _semantic_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
 
     return _semantic_model
 

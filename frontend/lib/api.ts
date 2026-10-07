@@ -3,6 +3,7 @@ import { getAccessToken } from "./auth";
 import { reflectionSteps } from "./reflections";
 import { deriveStrategies } from "./strategies";
 import type {
+  AIRecommendationResponse,
   DashboardData,
   FeedbackItem,
   KnowledgeGapAnalysis,
@@ -298,7 +299,7 @@ export async function fetchOutcomeDetail(
 ): Promise<OutcomeDetail | null> {
   const loCode = outcomeId.toUpperCase();
 
-  const [subjectData, masteryData, feedbackData] =
+  const [subjectData, masteryData, feedbackData, aiData] =
     await Promise.all([
       getJson<RawSubject>(
         `/subjects/${DEMO_SUBJECT_CODE}`,
@@ -313,6 +314,13 @@ export async function fetchOutcomeDetail(
           loCode,
         )}`,
       ),
+
+      getJson<AIRecommendationResponse>(
+        `/students/${DEMO_STUDENT_ID}/ai-recommendations`,
+      ).catch((error) => {
+        console.error("AI recommendations unavailable; using fallback:", error);
+        return null;
+      }),
     ]);
 
   const lo = subjectData.learning_outcomes.find(
@@ -348,6 +356,37 @@ export async function fetchOutcomeDetail(
     outcomeNameByCode,
   );
 
+  const matchingAI = aiData?.recommendations.find(
+    (item) => item.lo_code.toUpperCase() === loCode,
+  );
+
+  const aiRecommendation = matchingAI?.ai_recommendation;
+  const fallbackStrategies = deriveStrategies(reasons);
+
+  const strategies =
+    aiRecommendation && !aiRecommendation.error
+      ? [
+          {
+            id: `ai-priority-${loCode}`,
+            title: "Study priority",
+            why: aiRecommendation.explanation,
+            how: aiRecommendation.study_priority,
+          },
+          {
+            id: `ai-activity-${loCode}`,
+            title: "Recommended activities",
+            why: "Practice activities selected for your identified knowledge gap.",
+            how: aiRecommendation.learning_activities.join(" • "),
+          },
+          {
+            id: `ai-exercise-${loCode}`,
+            title: "Practical exercise",
+            why: "Apply the learning outcome in a focused practical task.",
+            how: aiRecommendation.practical_exercise,
+          },
+        ]
+      : fallbackStrategies;
+
   return {
     outcome: {
       id: outcomeId,
@@ -360,7 +399,7 @@ export async function fetchOutcomeDetail(
 
     reasons,
 
-    strategies: deriveStrategies(reasons),
+    strategies,
 
     // Moodle/content resources can be connected later.
     resources: [],
@@ -614,22 +653,32 @@ async function resolveOutcome(
 export async function fetchQuiz(
   outcomeId: string,
 ): Promise<Quiz | null> {
-  // Questions are still placeholders.
-  // Outcome metadata and mastery are real backend data.
+  const resolved = await resolveOutcome(outcomeId);
 
-  const resolved =
-    await resolveOutcome(outcomeId);
-
-  if (!resolved) {
+  if (!resolved?.code) {
     return null;
   }
 
+  const data = await getJson<{
+    quiz_id: string;
+    student_id: string;
+    subject_code: string;
+    lo_code: string;
+    lo_description: string;
+    mastery_before: number;
+    knowledge_gap: string | null;
+    questions: QuizQuestion[];
+  }>(
+    `/students/${DEMO_STUDENT_ID}/quiz/${resolved.code}`,
+  );
+
   return {
+    quizId: data.quiz_id,
     outcomeId,
-    outcomeCode: resolved.code,
-    outcomeName: resolved.name,
-    masteryBefore: resolved.mastery,
-    questions: mock.genericQuizQuestions,
+    outcomeCode: data.lo_code,
+    outcomeName: data.lo_description,
+    masteryBefore: data.mastery_before,
+    questions: data.questions,
   };
 }
 
@@ -639,38 +688,10 @@ export async function fetchQuiz(
 
 export async function submitQuiz(
   outcomeId: string,
+  quizId: string,
   answers: Record<string, string>,
 ): Promise<QuizResult> {
-  const resolved =
-    await resolveOutcome(outcomeId);
-
-  const questions =
-    mock.genericQuizQuestions;
-
-  const wrong: {
-    question: QuizQuestion;
-    chosenKey: string;
-  }[] = [];
-
-  let correct = 0;
-
-  for (const question of questions) {
-    const chosenKey =
-      answers[question.id] ?? "";
-
-    if (
-      chosenKey === question.correctKey
-    ) {
-      correct += 1;
-    } else {
-      wrong.push({
-        question,
-        chosenKey,
-      });
-    }
-  }
-
-  const total = questions.length;
+  const resolved = await resolveOutcome(outcomeId);
 
   if (!resolved?.code) {
     throw new Error(
@@ -678,54 +699,42 @@ export async function submitQuiz(
     );
   }
 
-  // Save the completed quiz to the backend.
-  // Backend also recalculates mastery.
   const response = await fetch(
-    `${API_BASE_URL}/students/${DEMO_STUDENT_ID}/quiz-attempts`,
+    `${API_BASE_URL}/students/${DEMO_STUDENT_ID}/quiz/${resolved.code}/submit`,
     {
       method: "POST",
-
       headers: {
         "Content-Type": "application/json",
-          ...(getAccessToken()
+        ...(getAccessToken()
           ? {
               Authorization: `Bearer ${getAccessToken()}`,
             }
           : {}),
       },
-
       body: JSON.stringify({
-        lo_code: resolved.code,
-        score: correct,
-        total_questions: total,
+        quiz_id: quizId,
+        answers,
       }),
     },
   );
 
   if (!response.ok) {
     throw new Error(
-      "Failed to save quiz attempt",
+      "Failed to submit AI quiz",
     );
   }
 
   const result = await response.json();
-
-  const attempt = result.data;
+  const data = result.data;
 
   return {
-    outcomeCode: resolved.code,
+    outcomeCode: data.outcome_code,
     outcomeName: resolved.name,
-    correct,
-    total,
-
-    // These now come directly from the backend.
-    masteryBefore:
-      attempt.mastery_before,
-
-    masteryAfter:
-      attempt.mastery_after,
-
-    review: wrong,
+    correct: data.correct,
+    total: data.total,
+    masteryBefore: data.mastery_before,
+    masteryAfter: data.mastery_after,
+    review: data.review,
   };
 }
 

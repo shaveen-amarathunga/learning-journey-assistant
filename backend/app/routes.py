@@ -1,3 +1,4 @@
+import uuid
 """
 API Routes
 ==========
@@ -35,6 +36,11 @@ from app.feedback_analyzer import get_student_knowledge_gaps
 
 
 api = Blueprint("api", __name__, url_prefix="/api")
+
+# Temporary server-side store for generated quizzes.
+# Correct answers are never sent to the browser before submission.
+_generated_quizzes = {}
+
 
 
 # ===========================================================================
@@ -725,4 +731,256 @@ def get_ai_recommendations(student_id):
     except Exception as error:
         return jsonify({
             "error": str(error)
+        }), 500# ===========================================================================
+# AI-GENERATED PRACTICE QUIZ
+# ===========================================================================
+
+@api.route(
+    "/students/<string:student_id>/quiz/<string:lo_code>",
+    methods=["GET"]
+)
+@require_self()
+def get_ai_quiz(student_id, lo_code):
+    """
+    Generate a personalised 5-question practice quiz for
+    a specific learning outcome.
+    """
+
+    try:
+        from app.llm_service import generate_ai_quiz
+
+        student = db.session.get(Student, student_id)
+
+        if not student:
+            return jsonify({
+                "error": "Student not found"
+            }), 404
+
+        lo = LearningOutcome.query.filter_by(
+            lo_code=lo_code.upper()
+        ).first()
+
+        if not lo:
+            return jsonify({
+                "error": "Learning outcome not found"
+            }), 404
+
+        mastery = MasteryScore.query.filter_by(
+            student_id=student_id,
+            lo_id=lo.id
+        ).first()
+
+        mastery_score = (
+            mastery.score
+            if mastery
+            else 0.0
+        )
+
+        gap_result = get_student_knowledge_gaps(
+            "data/rubric_feedback.json",
+            student_id
+        )
+
+        matching_gap = next(
+            (
+                gap
+                for gap in gap_result.get(
+                    "knowledge_gaps", []
+                )
+                if gap.get(
+                    "lo_code", ""
+                ).upper() == lo.lo_code.upper()
+            ),
+            None,
+        )
+
+        quiz_context = {
+            "subject_code": lo.subject_code,
+            "lo_code": lo.lo_code,
+            "lo_description": lo.description,
+            "mastery_score": mastery_score,
+            "knowledge_gap": (
+                matching_gap.get("knowledge_gap")
+                if matching_gap
+                else None
+            ),
+            "feedback": (
+                matching_gap.get("feedback")
+                if matching_gap
+                else None
+            ),
+        }
+
+        questions = generate_ai_quiz(
+            quiz_context
+        )
+
+        if isinstance(questions, dict) and questions.get("error"):
+            return jsonify({
+                "error": questions["error"]
+            }), 502
+
+        # Keep the answer key on the server.
+        quiz_id = str(uuid.uuid4())
+
+        _generated_quizzes[quiz_id] = {
+            "student_id": student_id,
+            "lo_code": lo.lo_code,
+            "questions": questions,
+        }
+
+        # Send only public question data to the browser.
+        public_questions = [
+            {
+                "id": question["id"],
+                "prompt": question["prompt"],
+                "options": question["options"],
+                "reviewLabel": question["reviewLabel"],
+            }
+            for question in questions
+        ]
+
+        return jsonify({
+            "data": {
+                "quiz_id": quiz_id,
+                "student_id": student_id,
+                "subject_code": lo.subject_code,
+                "lo_code": lo.lo_code,
+                "lo_description": lo.description,
+                "mastery_before": mastery_score,
+                "knowledge_gap": (
+                    matching_gap.get("knowledge_gap")
+                    if matching_gap
+                    else None
+                ),
+                "questions": public_questions,
+            }
+        }), 200
+
+    except Exception as error:
+        return jsonify({
+            "error": str(error)
+        }), 500
+
+
+@api.route(
+    "/students/<string:student_id>/quiz/<string:lo_code>/submit",
+    methods=["POST"]
+)
+@require_self()
+def submit_ai_quiz(student_id, lo_code):
+    """Mark an AI-generated quiz on the server and update mastery."""
+
+    data = request.get_json(silent=True) or {}
+    quiz_id = data.get("quiz_id")
+    answers = data.get("answers")
+
+    if not quiz_id or not isinstance(answers, dict):
+        return jsonify({
+            "error": "quiz_id and answers are required"
+        }), 400
+
+    stored_quiz = _generated_quizzes.get(quiz_id)
+
+    if not stored_quiz:
+        return jsonify({
+            "error": "Quiz not found or expired"
+        }), 404
+
+    if (
+        stored_quiz["student_id"] != student_id
+        or stored_quiz["lo_code"].upper() != lo_code.upper()
+    ):
+        return jsonify({
+            "error": "Quiz does not belong to this student or learning outcome"
+        }), 403
+
+    lo = LearningOutcome.query.filter_by(
+        lo_code=lo_code.upper()
+    ).first()
+
+    if not lo:
+        return jsonify({
+            "error": "Learning outcome not found"
+        }), 404
+
+    questions = stored_quiz["questions"]
+    correct = 0
+    review = []
+
+    for question in questions:
+        chosen_key = answers.get(question["id"], "")
+        correct_key = question["correctKey"]
+
+        if chosen_key == correct_key:
+            correct += 1
+        else:
+            review.append({
+                "question": question,
+                "chosenKey": chosen_key,
+            })
+
+    total = len(questions)
+
+    mastery = MasteryScore.query.filter_by(
+        student_id=student_id,
+        lo_id=lo.id
+    ).first()
+
+    mastery_before = mastery.score if mastery else 0.0
+    quiz_percentage = (correct / total) * 100
+
+    mastery_after = round(
+        mastery_before
+        + (quiz_percentage - mastery_before) * 0.25,
+        1
+    )
+
+    mastery_after = max(
+        0.0,
+        min(100.0, mastery_after)
+    )
+
+    try:
+        if mastery:
+            mastery.score = mastery_after
+        else:
+            mastery = MasteryScore(
+                student_id=student_id,
+                lo_id=lo.id,
+                score=mastery_after,
+            )
+            db.session.add(mastery)
+
+        attempt = QuizAttempt(
+            student_id=student_id,
+            lo_id=lo.id,
+            score=correct,
+            total_questions=total,
+            mastery_before=mastery_before,
+            mastery_after=mastery_after,
+        )
+
+        db.session.add(attempt)
+        db.session.commit()
+
+        # A generated quiz can only be submitted once.
+        _generated_quizzes.pop(quiz_id, None)
+
+        return jsonify({
+            "data": {
+                "outcome_code": lo.lo_code,
+                "correct": correct,
+                "total": total,
+                "mastery_before": mastery_before,
+                "mastery_after": mastery_after,
+                "review": review,
+            }
+        }), 201
+
+    except SQLAlchemyError as error:
+        db.session.rollback()
+
+        return jsonify({
+            "error": f"Database error: {str(error)}"
         }), 500

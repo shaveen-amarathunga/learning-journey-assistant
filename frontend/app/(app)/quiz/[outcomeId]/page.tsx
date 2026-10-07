@@ -39,11 +39,17 @@ export default function QuizPage() {
 
   useEffect(() => {
     let active = true;
-    fetchQuiz(outcomeId).then((q) => {
-      if (!active) return;
-      setQuiz(q);
-      setPhase(q ? "quiz" : "loading");
-    });
+    fetchQuiz(outcomeId)
+      .then((q) => {
+        if (!active) return;
+        setQuiz(q);
+        setPhase(q ? "quiz" : "loading");
+      })
+      .catch((error) => {
+        console.error("Failed to generate quiz:", error);
+        if (!active) return;
+        setQuiz(null);
+      });
     return () => {
       active = false;
     };
@@ -86,18 +92,28 @@ export default function QuizPage() {
   async function confirmPrediction(value: number) {
     setPredicted(value);
     setPhase("submitting");
-    const r = await submitQuiz(outcomeId, answers);
+    const r = await submitQuiz(outcomeId, quiz!.quizId, answers);
     setResult(r);
     setPhase("results");
   }
 
-  function retry() {
+  async function retry() {
     setAnswers({});
     setConfidence({});
     setIndex(0);
     setPredicted(null);
     setResult(null);
-    setPhase("quiz");
+    setQuiz(undefined);
+    setPhase("loading");
+
+    try {
+      const q = await fetchQuiz(outcomeId);
+      setQuiz(q);
+      setPhase(q ? "quiz" : "loading");
+    } catch (error) {
+      console.error("Failed to generate retry quiz:", error);
+      setQuiz(null);
+    }
   }
 
   if (phase === "predict" || phase === "submitting") {
@@ -233,7 +249,7 @@ export default function QuizPage() {
       </Button>
 
       <p className="text-center text-xs text-muted">
-        Sample questions — adaptive generation is coming.
+        AI-generated practice based on this learning outcome.
       </p>
     </Card>
   );

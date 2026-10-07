@@ -101,11 +101,12 @@ export interface QuizQuestion {
   id: string;
   prompt: string;
   options: QuizOption[];
-  correctKey: string;
+  correctKey?: string;
   reviewLabel: string; // short label used on the results screen
 }
 
 export interface Quiz {
+  quizId: string;
   outcomeId: string;
   outcomeCode?: string;
   outcomeName: string;
@@ -139,4 +140,25 @@ export interface KnowledgeGapAnalysis {
   student_id: string;
   feedback_records_analysed: number;
   knowledge_gaps: KnowledgeGap[];
+}
+export interface AIRecommendationContent {
+  explanation: string;
+  learning_activities: string[];
+  practical_exercise: string;
+  study_priority: string;
+  error?: string;
+}
+
+export interface AIRecommendation {
+  lo_code: string;
+  knowledge_gap: string;
+  score: number;
+  feedback: string;
+  ai_recommendation: AIRecommendationContent;
+}
+
+export interface AIRecommendationResponse {
+  student_id: string;
+  count: number;
+  recommendations: AIRecommendation[];
 }
