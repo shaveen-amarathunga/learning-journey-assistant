@@ -1,174 +1,34 @@
-import json
 import re
 
 from sentence_transformers import SentenceTransformer, util
 
+from app.models import RubricFeedback, LearningOutcome
 
-# Lightweight semantic model used to understand feedback
-# even when the wording does not exactly match our keywords.
+
 _semantic_model = None
 
 
 def get_semantic_model():
+    """
+    Load the sentence-transformer model once and reuse it.
+    CPU is used explicitly for compatibility across development machines.
+    """
     global _semantic_model
 
     if _semantic_model is None:
-        _semantic_model = SentenceTransformer("all-MiniLM-L6-v2", device="cpu")
+        _semantic_model = SentenceTransformer(
+            "all-MiniLM-L6-v2",
+            device="cpu"
+        )
 
     return _semantic_model
 
 
-# Semantic descriptions of the knowledge gaps.
-# These allow the system to understand feedback even when
-# the wording does not exactly match our keyword rules.
-SEMANTIC_GAPS = {
-    "LO1": [
-        (
-            "The software does not handle invalid inputs, errors, unusual situations, or edge cases correctly.",
-            "Software robustness and edge-case handling",
-            "Review input validation, error handling, and testing for edge cases."
-        ),
-        (
-            "The code contains duplication, poor structure, or needs refactoring and better modular design.",
-            "Code quality and software design",
-            "Review refactoring, modular design, and the DRY principle."
-        ),
-        (
-            "The software design does not follow appropriate design principles or patterns.",
-            "Software design principles",
-            "Review SOLID principles and common software design patterns."
-        )
-    ],
-
-    "LO2": [
-        (
-            "Git commits are unclear, poorly described, or do not communicate changes effectively.",
-            "Git commit communication",
-            "Practise writing clear, descriptive, and consistent Git commit messages."
-        ),
-        (
-            "The student has difficulty resolving conflicts when merging code with other team members.",
-            "Git merge conflict management",
-            "Review how to resolve Git merge conflicts safely before merging code."
-        ),
-        (
-            "The team has problems with collaboration, workload distribution, contribution, or communication.",
-            "Agile team collaboration",
-            "Review task allocation, team communication, and collaborative agile practices."
-        ),
-        (
-            "The team needs improvement in sprint planning, retrospectives, or agile processes.",
-            "Agile sprint practices",
-            "Review sprint planning, retrospectives, and continuous improvement."
-        )
-    ],
-
-    "LO3": [
-        (
-            "The database does not correctly enforce relationships, referential integrity, or foreign key constraints.",
-            "Database integrity and foreign key constraints",
-            "Review foreign key constraints and referential integrity in relational databases."
-        ),
-        (
-            "Database queries are inefficient, slow, or could be improved for better performance.",
-            "Database query optimisation",
-            "Review database indexing and efficient SQL query design."
-        ),
-        (
-            "The relational database schema, table relationships, or normalisation could be designed better.",
-            "Relational database design",
-            "Review relational schema design, relationships, and normalisation."
-        )
-    ],
-
-    "LO4": [
-        (
-            "The API does not correctly validate input or handle invalid requests and errors.",
-            "API input validation",
-            "Review REST API input validation and appropriate error responses."
-        ),
-        (
-            "The REST API uses inappropriate HTTP methods, status codes, endpoints, or resource design.",
-            "RESTful API design",
-            "Review HTTP methods, status codes, and RESTful resource design."
-        )
-    ],
-
-    "LO5": [
-        (
-            "The project documentation is incomplete, unclear, or does not explain how to understand and run the system.",
-            "Technical documentation",
-            "Improve README and technical documentation so another developer can understand and run the system."
-        ),
-        (
-            "The student has difficulty explaining technical decisions clearly in a presentation or discussion.",
-            "Technical communication",
-            "Practise clearly explaining technical decisions and their justification."
-        )
-    ]
-}
-
-
-def identify_semantic_knowledge_gap(comment: str, lo_code: str) -> dict:
-    """
-    Use sentence embeddings to identify a knowledge gap even when
-    the feedback does not contain an exact keyword match.
-    """
-
-    candidates = SEMANTIC_GAPS.get(lo_code, [])
-
-    if not candidates:
-        return {
-            "knowledge_gap": "No specific knowledge gap identified",
-            "recommendation": "Review the feedback and relevant learning outcome."
-        }
-
-    model = get_semantic_model()
-
-    descriptions = [
-        candidate[0]
-        for candidate in candidates
-    ]
-
-    comment_embedding = model.encode(
-        comment,
-        convert_to_tensor=True
-    )
-
-    description_embeddings = model.encode(
-        descriptions,
-        convert_to_tensor=True
-    )
-
-    similarities = util.cos_sim(
-        comment_embedding,
-        description_embeddings
-    )[0]
-
-    best_index = int(similarities.argmax().item())
-    best_score = float(similarities[best_index].item())
-
-    # Prevent weak semantic matches from being treated as real gaps.
-    if best_score < 0.35:
-        return {
-            "knowledge_gap": "No specific knowledge gap identified",
-            "recommendation": "Review the feedback and relevant learning outcome."
-        }
-
-    _, gap, recommendation = candidates[best_index]
-
-    return {
-        "knowledge_gap": gap,
-        "recommendation": recommendation
-    }
-
-
 def analyse_feedback(comment: str) -> dict:
     """
-    Analyse written assessment feedback and identify
-    strengths, weaknesses and the overall feedback type.
+    Identify whether written feedback is positive, constructive,
+    or indicates an area requiring improvement.
     """
-
     text = comment.strip()
     text_lower = text.lower()
 
@@ -179,7 +39,7 @@ def analyse_feedback(comment: str) -> dict:
         "good",
         "well",
         "effective",
-        "clear"
+        "clear",
     ]
 
     improvement_words = [
@@ -188,15 +48,20 @@ def analyse_feedback(comment: str) -> dict:
         "unclear",
         "minimal",
         "struggle",
+        "struggles",
+        "difficulty",
         "missing",
         "should",
         "needs",
         "however",
-        "but"
+        "but",
+        "improve",
+        "improvement",
     ]
 
     positive_matches = [
-        word for word in positive_words
+        word
+        for word in positive_words
         if re.search(
             rf"\b{re.escape(word)}\b",
             text_lower
@@ -204,7 +69,8 @@ def analyse_feedback(comment: str) -> dict:
     ]
 
     improvement_matches = [
-        word for word in improvement_words
+        word
+        for word in improvement_words
         if re.search(
             rf"\b{re.escape(word)}\b",
             text_lower
@@ -213,13 +79,10 @@ def analyse_feedback(comment: str) -> dict:
 
     if positive_matches and improvement_matches:
         feedback_type = "constructive"
-
     elif improvement_matches:
         feedback_type = "needs improvement"
-
     elif positive_matches:
         feedback_type = "positive"
-
     else:
         feedback_type = "neutral"
 
@@ -227,225 +90,201 @@ def analyse_feedback(comment: str) -> dict:
         "comment": text,
         "feedback_type": feedback_type,
         "positive_indicators": positive_matches,
-        "improvement_indicators": improvement_matches
+        "improvement_indicators": improvement_matches,
     }
 
 
-def identify_knowledge_gap(comment: str, lo_code: str) -> dict:
+def calculate_feedback_relevance(
+    comment: str,
+    lo_description: str
+) -> float:
     """
-    Identify a likely knowledge or skill gap from written
-    feedback using the learning outcome as context.
+    Measure semantic similarity between feedback and the actual
+    learning-outcome description stored in the database.
 
-    Exact keyword rules are checked first. If no keyword
-    matches, semantic similarity is used as a fallback.
+    This is subject-independent: adding another subject does not
+    require adding Python rules.
     """
+    model = get_semantic_model()
 
-    text = comment.lower()
-
-    gap_patterns = {
-        "LO1": [
-            (
-                ["edge case", "edge cases", "validation"],
-                "Software robustness and edge-case handling",
-                "Review input validation, error handling, and testing for edge cases."
-            ),
-            (
-                ["duplication", "refactor", "too much"],
-                "Code quality and software design",
-                "Review refactoring, modular design, and the DRY principle."
-            ),
-            (
-                ["design pattern", "solid"],
-                "Software design principles",
-                "Review SOLID principles and common software design patterns."
-            )
-        ],
-
-        "LO2": [
-            (
-                ["commit message", "commit messages"],
-                "Git commit communication",
-                "Practise writing clear, descriptive, and consistent Git commit messages."
-            ),
-            (
-                ["merge conflict", "merge conflicts"],
-                "Git merge conflict management",
-                "Review how to resolve Git merge conflicts safely before merging code."
-            ),
-            (
-                ["workload", "team dynamics", "contribute"],
-                "Agile team collaboration",
-                "Review task allocation, team communication, and collaborative agile practices."
-            ),
-            (
-                ["sprint planning", "retrospective"],
-                "Agile sprint practices",
-                "Review sprint planning, retrospectives, and continuous improvement."
-            )
-        ],
-
-        "LO3": [
-            (
-                ["foreign key", "foreign keys", "orphan", "data integrity"],
-                "Database integrity and foreign key constraints",
-                "Review foreign key constraints and referential integrity in relational databases."
-            ),
-            (
-                ["index", "indexes", "query"],
-                "Database query optimisation",
-                "Review database indexing and efficient SQL query design."
-            ),
-            (
-                ["schema", "relationship", "normalisation", "normalization"],
-                "Relational database design",
-                "Review relational schema design, relationships, and normalisation."
-            )
-        ],
-
-        "LO4": [
-            (
-                ["validation", "negative", "endpoint"],
-                "API input validation",
-                "Review REST API input validation and appropriate error responses."
-            ),
-            (
-                ["status code", "http verb", "resource naming"],
-                "RESTful API design",
-                "Review HTTP methods, status codes, and RESTful resource design."
-            )
-        ],
-
-        "LO5": [
-            (
-                ["documentation", "readme"],
-                "Technical documentation",
-                "Improve README and technical documentation so another developer can understand and run the system."
-            ),
-            (
-                ["presentation", "communicate", "explain"],
-                "Technical communication",
-                "Practise clearly explaining technical decisions and their justification."
-            )
-        ]
-    }
-
-    # First try fast and deterministic keyword matching.
-    for keywords, gap, recommendation in gap_patterns.get(lo_code, []):
-        if any(keyword in text for keyword in keywords):
-            return {
-                "knowledge_gap": gap,
-                "recommendation": recommendation
-            }
-
-    # If there was no exact keyword match, use semantic NLP.
-    return identify_semantic_knowledge_gap(
-        comment,
-        lo_code
+    embeddings = model.encode(
+        [comment, lo_description],
+        convert_to_tensor=True
     )
 
+    similarity = util.cos_sim(
+        embeddings[0],
+        embeddings[1]
+    )[0][0]
 
-def analyse_student_feedback(comment: str, lo_code: str) -> dict:
+    return float(similarity.item())
+
+
+def analyse_feedback_record(
+    feedback: RubricFeedback,
+    learning_outcome: LearningOutcome
+) -> dict:
     """
-    Run the complete feedback analysis pipeline.
+    Analyse one database feedback record using its real learning
+    outcome as context.
     """
+    feedback_analysis = analyse_feedback(
+        feedback.comment
+    )
 
-    feedback_analysis = analyse_feedback(comment)
+    relevance = calculate_feedback_relevance(
+        feedback.comment,
+        learning_outcome.description
+    )
 
-    # Only identify a knowledge gap when the feedback
-    # actually indicates an area requiring improvement.
-    if feedback_analysis["feedback_type"] in [
-        "needs improvement",
-        "constructive"
-    ]:
-        gap_analysis = identify_knowledge_gap(
-            comment,
-            lo_code
-        )
-
-    else:
-        gap_analysis = {
-            "knowledge_gap": "No knowledge gap identified",
-            "recommendation":
-                "Continue demonstrating competency in this learning outcome."
-        }
+    needs_attention = (
+        feedback_analysis["feedback_type"]
+        in ["needs improvement", "constructive"]
+    )
 
     return {
-        "lo_code": lo_code,
-        "comment": comment,
+        "subject_code": learning_outcome.subject_code,
+        "lo_code": learning_outcome.lo_code,
+        "lo_description": learning_outcome.description,
+        "comment": feedback.comment,
+        "score": feedback.score,
         "feedback_type":
             feedback_analysis["feedback_type"],
         "positive_indicators":
             feedback_analysis["positive_indicators"],
         "improvement_indicators":
             feedback_analysis["improvement_indicators"],
-        "knowledge_gap":
-            gap_analysis["knowledge_gap"],
-        "recommendation":
-            gap_analysis["recommendation"]
+        "semantic_relevance": round(relevance, 4),
+        "needs_attention": needs_attention,
     }
 
 
-def analyse_feedback_file(file_path: str) -> list:
-    """
-    Analyse every feedback record contained in a JSON file.
-    """
-
-    with open(file_path, "r", encoding="utf-8") as file:
-        feedback_records = json.load(file)
-
-    results = []
-
-    for record in feedback_records:
-        analysis = analyse_student_feedback(
-            record["comment"],
-            record["lo_code"]
-        )
-
-        # Keep the original information so the NLP result
-        # can still be connected to the student and assessment.
-        analysis["student_id"] = record["student_id"]
-        analysis["assessment_id"] = record["assessment_id"]
-        analysis["score"] = record["score"]
-
-        results.append(analysis)
-
-    return results
-
-
 def get_student_knowledge_gaps(
-    file_path: str,
-    student_id: str
+    student_id: str,
+    subject_code: str
 ) -> dict:
     """
-    Analyse all feedback for one student and return
-    the knowledge gaps that were identified.
+    Analyse a student's rubric feedback for one selected subject.
+
+    Feedback and learning outcomes are loaded directly from the
+    database, making the analysis independent of hardcoded subjects
+    and duplicated JSON feedback files.
     """
+    if not subject_code:
+        raise ValueError("subject_code is required")
 
-    results = analyse_feedback_file(file_path)
+    subject_code = subject_code.upper()
 
-    student_results = [
-        result
-        for result in results
-        if result["student_id"] == student_id
+    feedback_records = (
+        RubricFeedback.query
+        .join(
+            LearningOutcome,
+            RubricFeedback.lo_id == LearningOutcome.id
+        )
+        .filter(
+            RubricFeedback.student_id == student_id,
+            LearningOutcome.subject_code == subject_code,
+        )
+        .order_by(RubricFeedback.created_at.asc())
+        .all()
+    )
+
+    analysed_records = []
+
+    for feedback in feedback_records:
+        learning_outcome = feedback.learning_outcome
+
+        if learning_outcome is None:
+            continue
+
+        analysed_records.append(
+            analyse_feedback_record(
+                feedback,
+                learning_outcome
+            )
+        )
+
+    # Keep only feedback that indicates improvement is required.
+    gap_records = [
+        record
+        for record in analysed_records
+        if record["needs_attention"]
     ]
 
-    gaps = []
+    # Group the student's weaknesses by the real database LO.
+    grouped = {}
 
-    for result in student_results:
-        if result["knowledge_gap"] not in [
-            "No knowledge gap identified",
-            "No specific knowledge gap identified"
-        ]:
-            gaps.append({
-                "lo_code": result["lo_code"],
-                "knowledge_gap": result["knowledge_gap"],
-                "recommendation": result["recommendation"],
-                "feedback": result["comment"],
-                "score": result["score"]
-            })
+    for record in gap_records:
+        key = record["lo_code"]
+
+        if key not in grouped:
+            grouped[key] = {
+                "subject_code": record["subject_code"],
+                "lo_code": record["lo_code"],
+                "lo_description": record["lo_description"],
+                "feedback": [],
+                "scores": [],
+                "semantic_relevance": [],
+            }
+
+        grouped[key]["feedback"].append(
+            record["comment"]
+        )
+
+        if record["score"] is not None:
+            grouped[key]["scores"].append(
+                float(record["score"])
+            )
+
+        grouped[key]["semantic_relevance"].append(
+            record["semantic_relevance"]
+        )
+
+    knowledge_gaps = []
+
+    for item in grouped.values():
+        scores = item["scores"]
+
+        average_score = (
+            round(sum(scores) / len(scores), 2)
+            if scores
+            else None
+        )
+
+        relevance_scores = item[
+            "semantic_relevance"
+        ]
+
+        average_relevance = (
+            round(
+                sum(relevance_scores)
+                / len(relevance_scores),
+                4
+            )
+            if relevance_scores
+            else 0.0
+        )
+
+        # Keep the structure useful to both the recommendation
+        # service and the quiz-generation service. The detailed
+        # wording can be generated by the LLM from real context.
+        knowledge_gaps.append({
+            "subject_code": item["subject_code"],
+            "lo_code": item["lo_code"],
+            "lo_description": item["lo_description"],
+            "knowledge_gap":
+                f"Improvement needed in {item['lo_description']}",
+            "recommendation":
+                f"Review and practise {item['lo_description']}",
+            "feedback": " ".join(item["feedback"]),
+            "score": average_score,
+            "semantic_relevance": average_relevance,
+        })
 
     return {
         "student_id": student_id,
-        "feedback_records_analysed": len(student_results),
-        "knowledge_gaps": gaps
+        "subject_code": subject_code,
+        "feedback_records_analysed":
+            len(analysed_records),
+        "knowledge_gaps": knowledge_gaps,
     }

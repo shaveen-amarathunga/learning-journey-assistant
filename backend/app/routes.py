@@ -174,9 +174,21 @@ def get_student_mastery(student_id):
             "error": f"Student {student_id} not found"
         }), 404
 
-    scores = MasteryScore.query.filter_by(
+    subject_code = request.args.get("subject_code")
+
+    query = MasteryScore.query.filter_by(
         student_id=student_id
-    ).all()
+    )
+
+    if subject_code:
+        query = query.join(
+            LearningOutcome,
+            MasteryScore.lo_id == LearningOutcome.id
+        ).filter(
+            LearningOutcome.subject_code == subject_code
+        )
+
+    scores = query.all()
 
     return jsonify({
         "data": [score.to_dict() for score in scores],
@@ -470,9 +482,21 @@ def get_quiz_attempts(student_id):
             "error": "Student not found"
         }), 404
 
-    attempts = QuizAttempt.query.filter_by(
+    subject_code = request.args.get("subject_code")
+
+    query = QuizAttempt.query.filter_by(
         student_id=student_id
-    ).all()
+    )
+
+    if subject_code:
+        query = query.join(
+            LearningOutcome,
+            QuizAttempt.lo_id == LearningOutcome.id
+        ).filter(
+            LearningOutcome.subject_code == subject_code
+        )
+
+    attempts = query.all()
 
     return jsonify({
         "data": [
@@ -496,6 +520,7 @@ def create_quiz_attempt(student_id):
     data = request.get_json(silent=True) or {}
 
     lo_code = data.get("lo_code")
+    subject_code = data.get("subject_code")
     score = data.get("score")
     total_questions = data.get(
         "total_questions"
@@ -503,12 +528,13 @@ def create_quiz_attempt(student_id):
 
     if (
         not lo_code
+        or not subject_code
         or score is None
         or total_questions is None
     ):
         return jsonify({
             "error":
-                "lo_code, score and total_questions are required"
+                "subject_code, lo_code, score and total_questions are required"
         }), 400
 
     if (
@@ -540,7 +566,8 @@ def create_quiz_attempt(student_id):
         }), 404
 
     lo = LearningOutcome.query.filter_by(
-        lo_code=lo_code
+        subject_code=subject_code,
+        lo_code=lo_code.upper()
     ).first()
 
     if not lo:
@@ -629,9 +656,16 @@ def get_knowledge_gaps(student_id):
     """
 
     try:
+        subject_code = request.args.get("subject_code")
+
+        if not subject_code:
+            return jsonify({
+                "error": "subject_code query parameter is required"
+            }), 400
+
         result = get_student_knowledge_gaps(
-            "data/rubric_feedback.json",
-            student_id
+            student_id,
+            subject_code
         )
 
         return jsonify({
@@ -664,9 +698,16 @@ def get_personalised_recommendations(student_id):
             generate_personalised_recommendations,
         )
 
+        subject_code = request.args.get("subject_code")
+
+        if not subject_code:
+            return jsonify({
+                "error": "subject_code query parameter is required"
+            }), 400
+
         result = get_student_knowledge_gaps(
-            "data/rubric_feedback.json",
-            student_id
+            student_id,
+            subject_code
         )
 
         recommendations = (
@@ -709,9 +750,16 @@ def get_ai_recommendations(student_id):
             generate_student_ai_recommendations,
         )
 
+        subject_code = request.args.get("subject_code")
+
+        if not subject_code:
+            return jsonify({
+                "error": "subject_code query parameter is required"
+            }), 400
+
         result = get_student_knowledge_gaps(
-            "data/rubric_feedback.json",
-            student_id
+            student_id,
+            subject_code
         )
 
         recommendations = (
@@ -756,7 +804,15 @@ def get_ai_quiz(student_id, lo_code):
                 "error": "Student not found"
             }), 404
 
+        subject_code = request.args.get("subject_code")
+
+        if not subject_code:
+            return jsonify({
+                "error": "subject_code query parameter is required"
+            }), 400
+
         lo = LearningOutcome.query.filter_by(
+            subject_code=subject_code,
             lo_code=lo_code.upper()
         ).first()
 
@@ -777,8 +833,8 @@ def get_ai_quiz(student_id, lo_code):
         )
 
         gap_result = get_student_knowledge_gaps(
-            "data/rubric_feedback.json",
-            student_id
+            student_id,
+            subject_code
         )
 
         matching_gap = next(
@@ -787,9 +843,11 @@ def get_ai_quiz(student_id, lo_code):
                 for gap in gap_result.get(
                     "knowledge_gaps", []
                 )
-                if gap.get(
-                    "lo_code", ""
-                ).upper() == lo.lo_code.upper()
+                if (
+                    gap.get("lo_code", "").upper() == lo.lo_code.upper()
+                    and gap.get("subject_code", "").upper()
+                    == subject_code.upper()
+                )
             ),
             None,
         )
@@ -825,6 +883,7 @@ def get_ai_quiz(student_id, lo_code):
 
         _generated_quizzes[quiz_id] = {
             "student_id": student_id,
+            "subject_code": lo.subject_code,
             "lo_code": lo.lo_code,
             "questions": questions,
         }
@@ -874,10 +933,16 @@ def submit_ai_quiz(student_id, lo_code):
     data = request.get_json(silent=True) or {}
     quiz_id = data.get("quiz_id")
     answers = data.get("answers")
+    subject_code = request.args.get("subject_code")
 
     if not quiz_id or not isinstance(answers, dict):
         return jsonify({
             "error": "quiz_id and answers are required"
+        }), 400
+
+    if not subject_code:
+        return jsonify({
+            "error": "subject_code query parameter is required"
         }), 400
 
     stored_quiz = _generated_quizzes.get(quiz_id)
@@ -890,12 +955,14 @@ def submit_ai_quiz(student_id, lo_code):
     if (
         stored_quiz["student_id"] != student_id
         or stored_quiz["lo_code"].upper() != lo_code.upper()
+        or stored_quiz["subject_code"].upper() != subject_code.upper()
     ):
         return jsonify({
-            "error": "Quiz does not belong to this student or learning outcome"
+            "error": "Quiz does not belong to this student, subject, or learning outcome"
         }), 403
 
     lo = LearningOutcome.query.filter_by(
+        subject_code=subject_code,
         lo_code=lo_code.upper()
     ).first()
 

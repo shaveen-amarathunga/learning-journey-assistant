@@ -1,20 +1,65 @@
 [
   {
     "id": 1,
-    "title": "Sprint 1 Deliverable \u2014 Project Setup & Skeleton",
+    "subject_code": "CSE3CAP",
+    "title": "Sprint 1 Deliverable — Project Setup & Skeleton",
     "max_marks": 100,
-    "due_date": "2026-07-18T04:19:17.760453"
+    "due_date": "2026-07-18"
   },
   {
     "id": 2,
-    "title": "Sprint 2 Deliverable \u2014 Backend & Database Implementation",
+    "subject_code": "CSE3CAP",
+    "title": "Sprint 2 Deliverable — Backend & Database Implementation",
     "max_marks": 100,
-    "due_date": "2026-08-01T04:19:17.760453"
+    "due_date": "2026-08-01"
   },
   {
     "id": 3,
+    "subject_code": "CSE3CAP",
     "title": "Technical Report & Team Presentation",
     "max_marks": 100,
-    "due_date": "2026-08-22T04:19:17.760453"
+    "due_date": "2026-08-22"
+  },
+  {
+    "id": 4,
+    "subject_code": "CSE2ML",
+    "title": "Data Preprocessing & Supervised Learning Assignment",
+    "max_marks": 100,
+    "due_date": "2026-07-24"
+  },
+  {
+    "id": 5,
+    "subject_code": "CSE2ML",
+    "title": "Model Evaluation & Tuning Assignment",
+    "max_marks": 100,
+    "due_date": "2026-08-14"
+  },
+  {
+    "id": 6,
+    "subject_code": "CSE2ML",
+    "title": "Machine Learning Final Project",
+    "max_marks": 100,
+    "due_date": "2026-09-04"
+  },
+  {
+    "id": 7,
+    "subject_code": "CSE2DBF",
+    "title": "ER Modelling & Relational Design Assignment",
+    "max_marks": 100,
+    "due_date": "2026-07-22"
+  },
+  {
+    "id": 8,
+    "subject_code": "CSE2DBF",
+    "title": "SQL & Normalization Assignment",
+    "max_marks": 100,
+    "due_date": "2026-08-12"
+  },
+  {
+    "id": 9,
+    "subject_code": "CSE2DBF",
+    "title": "Database Implementation Project",
+    "max_marks": 100,
+    "due_date": "2026-09-02"
   }
 ]

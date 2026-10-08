@@ -1,5 +1,5 @@
 import * as mock from "./mock-data";
-import { getAccessToken } from "./auth";
+import { getAccessToken, getSession } from "./auth";
 import { reflectionSteps } from "./reflections";
 import { deriveStrategies } from "./strategies";
 import type {
@@ -27,9 +27,26 @@ import type {
 export const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_BASE_URL ?? "http://127.0.0.1:5001/api";
 
-// TODO: derive these from authenticated session later.
-const DEMO_STUDENT_ID = "S001";
-const DEMO_SUBJECT_CODE = "CSE3CAP";
+const DEFAULT_STUDENT_ID = "S001";
+const DEFAULT_SUBJECT_CODE = "CSE3CAP";
+
+function getStudentId(): string {
+  return getSession()?.studentId ?? DEFAULT_STUDENT_ID;
+}
+
+function getSelectedSubjectCode(): string {
+  if (typeof window === "undefined") {
+    return DEFAULT_SUBJECT_CODE;
+  }
+
+  return localStorage.getItem("lja.subjectCode") ?? DEFAULT_SUBJECT_CODE;
+}
+
+export function setSelectedSubjectCode(subjectCode: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("lja.subjectCode", subjectCode);
+  }
+}
 
 const LATENCY_MS = 350;
 
@@ -179,8 +196,8 @@ function mapFeedback(
 
 export async function fetchStudent(): Promise<Student> {
   const [studentData, subjectData] = await Promise.all([
-    getJson<RawStudent>(`/students/${DEMO_STUDENT_ID}`),
-    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
+    getJson<RawStudent>(`/students/${getStudentId()}`),
+    getJson<RawSubject>(`/subjects/${getSelectedSubjectCode()}`),
   ]);
 
   return {
@@ -205,22 +222,22 @@ export async function fetchDashboard(): Promise<DashboardData> {
     subjectData,
     quizAttempts,
   ] = await Promise.all([
-    getJson<RawStudent>(`/students/${DEMO_STUDENT_ID}`),
+    getJson<RawStudent>(`/students/${getStudentId()}`),
 
     getJson<RawMasteryScore[]>(
-      `/students/${DEMO_STUDENT_ID}/mastery`,
+      `/students/${getStudentId()}/mastery?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
     ),
 
     getJson<RawFeedback[]>(
-      `/students/${DEMO_STUDENT_ID}/feedback`,
+      `/students/${getStudentId()}/feedback?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
     ),
 
     getJson<RawSubject>(
-      `/subjects/${DEMO_SUBJECT_CODE}`,
+      `/subjects/${getSelectedSubjectCode()}`,
     ),
 
     getJson<RawQuizAttempt[]>(
-      `/students/${DEMO_STUDENT_ID}/quiz-attempts`,
+      `/students/${getStudentId()}/quiz-attempts?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
     ),
   ]);
 
@@ -302,21 +319,21 @@ export async function fetchOutcomeDetail(
   const [subjectData, masteryData, feedbackData, aiData] =
     await Promise.all([
       getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
+        `/subjects/${getSelectedSubjectCode()}`,
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
+        `/students/${getStudentId()}/mastery?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ),
 
       getJson<RawFeedback[]>(
-        `/students/${DEMO_STUDENT_ID}/feedback?lo_code=${encodeURIComponent(
+        `/students/${getStudentId()}/feedback?lo_code=${encodeURIComponent(
           loCode,
-        )}`,
+        )}&subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ),
 
       getJson<AIRecommendationResponse>(
-        `/students/${DEMO_STUDENT_ID}/ai-recommendations`,
+        `/students/${getStudentId()}/ai-recommendations?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ).catch((error) => {
         console.error("AI recommendations unavailable; using fallback:", error);
         return null;
@@ -435,15 +452,15 @@ async function buildLearningPlan(): Promise<LearningPlan> {
   const [subjectData, masteryData, feedbackData] =
     await Promise.all([
       getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
+        `/subjects/${getSelectedSubjectCode()}`,
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
+        `/students/${getStudentId()}/mastery?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ),
 
       getJson<RawFeedback[]>(
-        `/students/${DEMO_STUDENT_ID}/feedback`,
+        `/students/${getStudentId()}/feedback?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ),
     ]);
 
@@ -531,11 +548,11 @@ export async function fetchTrends(): Promise<OutcomeTrend[]> {
   const [subjectData, masteryData] =
     await Promise.all([
       getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
+        `/subjects/${getSelectedSubjectCode()}`,
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
+        `/students/${getStudentId()}/mastery?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ),
     ]);
 
@@ -616,11 +633,11 @@ async function resolveOutcome(
   const [subjectData, masteryData] =
     await Promise.all([
       getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
+        `/subjects/${getSelectedSubjectCode()}`,
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${DEMO_STUDENT_ID}/mastery`,
+        `/students/${getStudentId()}/mastery?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ),
     ]);
 
@@ -669,7 +686,7 @@ export async function fetchQuiz(
     knowledge_gap: string | null;
     questions: QuizQuestion[];
   }>(
-    `/students/${DEMO_STUDENT_ID}/quiz/${resolved.code}`,
+    `/students/${getStudentId()}/quiz/${resolved.code}?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
   );
 
   return {
@@ -700,7 +717,7 @@ export async function submitQuiz(
   }
 
   const response = await fetch(
-    `${API_BASE_URL}/students/${DEMO_STUDENT_ID}/quiz/${resolved.code}/submit`,
+    `${API_BASE_URL}/students/${getStudentId()}/quiz/${resolved.code}/submit?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
     {
       method: "POST",
       headers: {
@@ -750,6 +767,32 @@ export async function submitQuiz(
  */
 export async function fetchKnowledgeGaps(): Promise<KnowledgeGapAnalysis> {
   return getJson<KnowledgeGapAnalysis>(
-    `/students/${DEMO_STUDENT_ID}/knowledge-gaps`,
+    `/students/${getStudentId()}/knowledge-gaps?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
   );
+}
+// ---------------------------------------------------------------------------
+// SUBJECTS
+// ---------------------------------------------------------------------------
+
+export interface SubjectOption {
+  code: string;
+  name: string;
+}
+
+export async function fetchSubjects(): Promise<SubjectOption[]> {
+  const subjects = await getJson<
+    Array<{
+      code: string;
+      name: string;
+    }>
+  >("/subjects");
+
+  return subjects.map((subject) => ({
+    code: subject.code,
+    name: subject.name,
+  }));
+}
+
+export function getCurrentSubjectCode(): string {
+  return getSelectedSubjectCode();
 }
