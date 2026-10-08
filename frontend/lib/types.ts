@@ -71,7 +71,7 @@ export interface LearningPlan {
 }
 
 export interface TrendPoint {
-  label: string; // e.g. "Assignment 1"
+  label: string;
   value: number; // 0 - 100
 }
 
@@ -80,7 +80,7 @@ export interface OutcomeTrend {
   outcomeCode?: string;
   outcomeName: string;
   series: TrendPoint[];
-  deltaSinceLast: number; // signed, percentage points
+  deltaSinceLast: number | null; // signed percentage points, or null without quiz history
 }
 
 export interface DashboardData {

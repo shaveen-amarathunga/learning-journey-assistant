@@ -129,7 +129,7 @@ function Dashboard({ onRetry }: { onRetry: () => void }) {
                         label={o.code ?? o.name}
                         sublabel={o.code ? o.name : undefined}
                         value={o.mastery}
-                        delta={t?.deltaSinceLast}
+                        delta={t?.deltaSinceLast ?? undefined}
                         className="min-w-0 flex-1"
                       />
                       <ChevronRightIcon className="h-4 w-4 shrink-0 text-neutral-400" />

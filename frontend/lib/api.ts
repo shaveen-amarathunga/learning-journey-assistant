@@ -541,74 +541,65 @@ export async function regenerateLearningPlan(): Promise<LearningPlan> {
 // TRENDS
 // ---------------------------------------------------------------------------
 
-const clampPct = (n: number) =>
-  Math.max(0, Math.min(100, Math.round(n)));
-
 export async function fetchTrends(): Promise<OutcomeTrend[]> {
-  const [subjectData, masteryData] =
+  const [subjectData, quizAttempts] =
     await Promise.all([
       getJson<RawSubject>(
         `/subjects/${getSelectedSubjectCode()}`,
       ),
 
-      getJson<RawMasteryScore[]>(
-        `/students/${getStudentId()}/mastery?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
+      getJson<RawQuizAttempt[]>(
+        `/students/${getStudentId()}/quiz-attempts?subject_code=${encodeURIComponent(getSelectedSubjectCode())}`,
       ),
     ]);
 
-  const nameByCode = new Map(
-    subjectData.learning_outcomes.map((lo) => [
-      lo.lo_code.toUpperCase(),
-      lo.description,
-    ]),
-  );
+  const attemptsByCode = new Map<string, RawQuizAttempt[]>();
+  const sortedAttempts = [...quizAttempts].sort((a, b) => {
+    const aTime = Date.parse(a.completed_at ?? "");
+    const bTime = Date.parse(b.completed_at ?? "");
 
-  return masteryData.map((mastery) => {
-    const code =
-      (mastery.lo_code ?? "").toUpperCase();
+    if (
+      Number.isFinite(aTime) &&
+      Number.isFinite(bTime) &&
+      aTime !== bTime
+    ) {
+      return aTime - bTime;
+    }
 
-    const current = clampPct(mastery.score);
+    return a.id - b.id;
+  });
 
-    const rising = current >= 78;
+  for (const attempt of sortedAttempts) {
+    const code = (attempt.lo_code ?? "").toUpperCase();
+    if (!code) continue;
 
-    const step1 = rising
-      ? clampPct(
-          current -
-            Math.max(2, current * 0.05),
-        )
-      : current;
+    const attempts = attemptsByCode.get(code) ?? [];
+    attempts.push(attempt);
+    attemptsByCode.set(code, attempts);
+  }
 
-    const step0 = clampPct(
-      step1 - Math.max(3, current * 0.06),
-    );
+  return subjectData.learning_outcomes.map((outcome) => {
+    const code = outcome.lo_code.toUpperCase();
+    const attempts = attemptsByCode.get(code) ?? [];
+    const lastAttempt = attempts[attempts.length - 1];
 
     return {
-      outcomeId:
-        code.toLowerCase() ||
-        `lo-${mastery.lo_id}`,
-
+      outcomeId: code.toLowerCase(),
       outcomeCode: code || undefined,
-
-      outcomeName:
-        nameByCode.get(code) ?? code,
-
-      series: [
+      outcomeName: outcome.description,
+      series: attempts.flatMap((attempt, index) => [
         {
-          label: "Assessment 1",
-          value: step0,
+          label: `Quiz ${index + 1} · before`,
+          value: attempt.mastery_before,
         },
         {
-          label: "Quiz 1",
-          value: step1,
+          label: `Quiz ${index + 1} · after`,
+          value: attempt.mastery_after,
         },
-        {
-          label: "Quiz 2",
-          value: current,
-        },
-      ],
-
-      deltaSinceLast:
-        current - step1,
+      ]),
+      deltaSinceLast: lastAttempt
+        ? lastAttempt.mastery_after - lastAttempt.mastery_before
+        : null,
     };
   });
 }
