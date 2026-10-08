@@ -8,7 +8,7 @@ services:
     rootDir: backend
     # requirements-base.txt skips sentence-transformers (PyTorch is too large
     # for the free plan); the feedback analyser falls back to keyword rules.
-    buildCommand: pip install -r requirements-base.txt && python scripts/seed_db.py --reset
+    buildCommand: pip install -r requirements-base.txt && python scripts/seed_db.py --reset && PYTHONPATH=. python scripts/add_multisubject_feedback.py
     startCommand: gunicorn "app:create_app()" --bind 0.0.0.0:$PORT --timeout 120
     healthCheckPath: /api/health
     envVars:

@@ -49,10 +49,10 @@ export default function LoginPage() {
           <div className="mt-6 space-y-4">
             <label className="block">
               <span className="text-sm font-medium text-foreground">
-                Student email
+                Student ID or email
               </span>
               <input
-                type="email"
+                type="text"
                 autoComplete="username"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -100,8 +100,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-4 text-center text-xs text-muted">
-          Demo accounts: any student email (e.g. aisha.khan@students.latrobe.edu.au)
-          with the password <span className="font-mono">password123</span>.
+          Demo accounts: S001–S005 (or their student email) with the password <span className="font-mono">password123</span>.
         </p>
       </div>
     </main>

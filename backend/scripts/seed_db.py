@@ -61,24 +61,31 @@ def seed_subjects():
 
 
 def seed_learning_outcomes():
-    """LOs belong to a subject. We only have one subject (CSE3CAP) so all LOs
-    attach to it. Returns a dict mapping lo_code → LO id for later use."""
+    """Seed learning outcomes for every subject.
+
+    LO codes repeat between subjects, so the lookup key must contain
+    both subject_code and lo_code.
+    """
     data = load_json("learning_outcomes.json")
-    subject_code = "CSE3CAP"
-    lo_code_to_id = {}
+    lo_key_to_id = {}
 
     for row in data:
+        subject_code = row["subject_code"]
+
         lo = LearningOutcome(
             subject_code=subject_code,
             lo_code=row["lo_code"],
             description=row["description"],
         )
         db.session.add(lo)
-        db.session.flush()   # forces the DB to assign an id we can use below
-        lo_code_to_id[row["lo_code"]] = lo.id
+        db.session.flush()
+
+        lo_key_to_id[
+            (subject_code, row["lo_code"])
+        ] = lo.id
 
     print(f"  ✓ Seeded {len(data)} learning outcome(s)")
-    return lo_code_to_id
+    return lo_key_to_id
 
 
 def seed_students():
@@ -96,33 +103,47 @@ def seed_students():
 
 
 def seed_assessments():
-    """Assessments belong to a subject (CSE3CAP)."""
+    """Seed assessments using their subject from the data file."""
     data = load_json("assessments.json")
+
     for row in data:
         db.session.add(Assessment(
             id=row["id"],
-            subject_code="CSE3CAP",
+            subject_code=row["subject_code"],
             title=row["title"],
             max_marks=row["max_marks"],
             due_date=parse_dt(row["due_date"]),
         ))
+
     print(f"  ✓ Seeded {len(data)} assessment(s)")
 
 
-def seed_rubric_feedback(lo_code_to_id: dict):
-    """Each feedback record references a student, an assessment, and an LO
-    (via the lo_code in the JSON, which we translate to lo_id)."""
+def seed_rubric_feedback(lo_key_to_id: dict):
+    """Seed feedback and resolve the LO using its assessment subject."""
     data = load_json("rubric_feedback.json")
+    assessments = {
+        row["id"]: row
+        for row in load_json("assessments.json")
+    }
+
     for row in data:
+        assessment = assessments[row["assessment_id"]]
+        subject_code = assessment["subject_code"]
+
+        lo_id = lo_key_to_id[
+            (subject_code, row["lo_code"])
+        ]
+
         db.session.add(RubricFeedback(
             id=row["id"],
             assessment_id=row["assessment_id"],
             student_id=row["student_id"],
-            lo_id=lo_code_to_id[row["lo_code"]],
+            lo_id=lo_id,
             comment=row["comment"],
             score=row["score"],
             created_at=parse_dt(row["created_at"]),
         ))
+
     print(f"  ✓ Seeded {len(data)} rubric feedback record(s)")
 
 
@@ -159,10 +180,10 @@ def main():
 
         # Order matters — respect foreign-key dependencies
         seed_subjects()
-        lo_code_to_id = seed_learning_outcomes()
+        lo_key_to_id = seed_learning_outcomes()
         seed_students()
         seed_assessments()
-        seed_rubric_feedback(lo_code_to_id)
+        seed_rubric_feedback(lo_key_to_id)
 
         db.session.commit()
 

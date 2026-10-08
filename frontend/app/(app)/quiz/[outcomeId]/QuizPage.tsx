@@ -39,11 +39,17 @@ export default function QuizPage() {
 
   useEffect(() => {
     let active = true;
-    fetchQuiz(outcomeId).then((q) => {
-      if (!active) return;
-      setQuiz(q);
-      setPhase(q ? "quiz" : "loading");
-    });
+    fetchQuiz(outcomeId)
+      .then((q) => {
+        if (!active) return;
+        setQuiz(q);
+        setPhase(q ? "quiz" : "loading");
+      })
+      .catch((error) => {
+        console.error("Failed to generate quiz:", error);
+        if (!active) return;
+        setQuiz(null);
+      });
     return () => {
       active = false;
     };
@@ -55,7 +61,7 @@ export default function QuizPage() {
 
   if (quiz === null) {
     return (
-      <EmptyState title="No quiz available for this outcome yet.">
+      <EmptyState title="Couldn't generate a quiz right now.">
         Try again from the outcome detail screen.
       </EmptyState>
     );
@@ -91,13 +97,25 @@ export default function QuizPage() {
     setPhase("results");
   }
 
-  function retry() {
+  // A submitted quiz is marked once on the server, so a retry asks the AI
+  // for a fresh set of questions.
+  async function retry() {
     setAnswers({});
     setConfidence({});
     setIndex(0);
     setPredicted(null);
     setResult(null);
-    setPhase("quiz");
+    setQuiz(undefined);
+    setPhase("loading");
+
+    try {
+      const q = await fetchQuiz(outcomeId);
+      setQuiz(q);
+      setPhase(q ? "quiz" : "loading");
+    } catch (error) {
+      console.error("Failed to generate retry quiz:", error);
+      setQuiz(null);
+    }
   }
 
   if (phase === "predict" || phase === "submitting") {
@@ -233,13 +251,11 @@ export default function QuizPage() {
       </Button>
 
       <p className="text-center text-xs text-muted">
-        {quiz!.source === "ai"
-          ? `AI-generated · ${quiz!.difficulty} level, matched to your ${quiz!.masteryBefore}% mastery${
-              quiz!.focusAreas?.length
-                ? ` · focus: ${quiz!.focusAreas.join(", ")}`
-                : ""
-            }`
-          : "General study-skills questions — the AI quiz isn't available right now."}
+        {`AI-generated · ${quiz!.difficulty} level, matched to your ${quiz!.masteryBefore}% mastery${
+          quiz!.focusAreas?.length
+            ? ` · focus: ${quiz!.focusAreas.join(", ")}`
+            : ""
+        }`}
       </p>
     </Card>
   );

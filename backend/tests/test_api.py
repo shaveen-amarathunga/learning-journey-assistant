@@ -148,6 +148,26 @@ class TestStudentEndpoints:
         assert data["count"] == 1
         assert data["data"][0]["lo_code"] == "LO1"
 
+    def test_feedback_can_be_filtered_by_subject(
+        self,
+        client,
+        sample_data,
+    ):
+        headers = get_auth_headers(client)
+
+        own_subject = client.get(
+            "/api/students/S001/feedback?subject_code=CSE3CAP",
+            headers=headers,
+        ).get_json()
+
+        other_subject = client.get(
+            "/api/students/S001/feedback?lo_code=LO1&subject_code=OTHER1",
+            headers=headers,
+        ).get_json()
+
+        assert own_subject["count"] == 2
+        assert other_subject["count"] == 0
+
 
 class TestMasteryWriteEndpoint:
 

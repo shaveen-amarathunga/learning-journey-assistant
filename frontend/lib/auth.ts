@@ -40,7 +40,7 @@ export async function signIn(email: string, password: string): Promise<void> {
   const body = await res.json().catch(() => ({}));
   if (!res.ok) {
     throw new Error(
-      res.status === 401 ? "Incorrect email or password." : body.error ?? "Sign in failed.",
+      res.status === 401 ? "Incorrect student ID, email or password." : body.error ?? "Sign in failed.",
     );
   }
 

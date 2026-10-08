@@ -2,6 +2,16 @@
   {
     "code": "CSE3CAP",
     "name": "Computer Science Capstone Project",
-    "description": "A team-based capstone project where students apply software engineering, project management, and technical communication skills to deliver a working software system for a real-world problem. Emphasises agile methodology, teamwork, and professional practice."
+    "description": "A team-based capstone project where students apply software engineering, project management, database, API, and technical communication skills to deliver a working software system."
+  },
+  {
+    "code": "CSE2ML",
+    "name": "Machine Learning",
+    "description": "Introduces data preprocessing, supervised and unsupervised machine learning, model evaluation, feature selection, and hyperparameter tuning."
+  },
+  {
+    "code": "CSE2DBF",
+    "name": "Database Fundamentals",
+    "description": "Covers relational database modelling, normalization, SQL, database integrity, transactions, indexing, and relational schema implementation."
   }
 ]

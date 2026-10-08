@@ -1,8 +1,8 @@
-import * as mock from "./mock-data";
 import { API_BASE_URL, getSession, signOut } from "./auth";
 import { reflectionSteps } from "./reflections";
 import { deriveStrategies } from "./strategies";
 import type {
+  AIRecommendationResponse,
   AiGapPlan,
   DashboardData,
   FeedbackItem,
@@ -26,7 +26,36 @@ import type {
 
 export { API_BASE_URL };
 
-const DEMO_SUBJECT_CODE = "CSE3CAP";
+const DEFAULT_SUBJECT_CODE = "CSE3CAP";
+const SUBJECT_KEY = "lja.subjectCode";
+
+/** The subject the student picked in the top bar (remembered per browser). */
+function getSelectedSubjectCode(): string {
+  if (typeof window === "undefined") {
+    return DEFAULT_SUBJECT_CODE;
+  }
+
+  try {
+    return localStorage.getItem(SUBJECT_KEY) ?? DEFAULT_SUBJECT_CODE;
+  } catch {
+    return DEFAULT_SUBJECT_CODE;
+  }
+}
+
+export function setSelectedSubjectCode(subjectCode: string): void {
+  if (typeof window === "undefined") return;
+
+  try {
+    localStorage.setItem(SUBJECT_KEY, subjectCode);
+  } catch {
+    // Storage blocked: the choice just won't be remembered.
+  }
+}
+
+/** `subject_code=…` query string for the selected subject. */
+function subjectQuery(): string {
+  return `subject_code=${encodeURIComponent(getSelectedSubjectCode())}`;
+}
 
 /** The signed-in student's ID (from the login session). */
 function currentStudentId(): string {
@@ -40,12 +69,6 @@ function currentStudentId(): string {
 function authHeaders(): Record<string, string> {
   const session = getSession();
   return session ? { Authorization: `Bearer ${session.token}` } : {};
-}
-
-const LATENCY_MS = 350;
-
-function delay<T>(value: T): Promise<T> {
-  return new Promise((resolve) => setTimeout(() => resolve(value), LATENCY_MS));
 }
 
 // ---------------------------------------------------------------------------
@@ -190,7 +213,7 @@ function mapFeedback(
 export async function fetchStudent(): Promise<Student> {
   const [studentData, subjectData] = await Promise.all([
     getJson<RawStudent>(`/students/${currentStudentId()}`),
-    getJson<RawSubject>(`/subjects/${DEMO_SUBJECT_CODE}`),
+    getJson<RawSubject>(`/subjects/${getSelectedSubjectCode()}`),
   ]);
 
   return {
@@ -218,19 +241,19 @@ export async function fetchDashboard(): Promise<DashboardData> {
     getJson<RawStudent>(`/students/${currentStudentId()}`),
 
     getJson<RawMasteryScore[]>(
-      `/students/${currentStudentId()}/mastery`,
+      `/students/${currentStudentId()}/mastery?${subjectQuery()}`,
     ),
 
     getJson<RawFeedback[]>(
-      `/students/${currentStudentId()}/feedback`,
+      `/students/${currentStudentId()}/feedback?${subjectQuery()}`,
     ),
 
     getJson<RawSubject>(
-      `/subjects/${DEMO_SUBJECT_CODE}`,
+      `/subjects/${getSelectedSubjectCode()}`,
     ),
 
     getJson<RawQuizAttempt[]>(
-      `/students/${currentStudentId()}/quiz-attempts`,
+      `/students/${currentStudentId()}/quiz-attempts?${subjectQuery()}`,
     ),
   ]);
 
@@ -309,21 +332,28 @@ export async function fetchOutcomeDetail(
 ): Promise<OutcomeDetail | null> {
   const loCode = outcomeId.toUpperCase();
 
-  const [subjectData, masteryData, feedbackData] =
+  const [subjectData, masteryData, feedbackData, aiData] =
     await Promise.all([
       getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
+        `/subjects/${getSelectedSubjectCode()}`,
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${currentStudentId()}/mastery`,
+        `/students/${currentStudentId()}/mastery?${subjectQuery()}`,
       ),
 
       getJson<RawFeedback[]>(
         `/students/${currentStudentId()}/feedback?lo_code=${encodeURIComponent(
           loCode,
-        )}`,
+        )}&${subjectQuery()}`,
       ),
+
+      getJson<AIRecommendationResponse>(
+        `/students/${currentStudentId()}/ai-recommendations?${subjectQuery()}`,
+      ).catch((error) => {
+        console.error("AI recommendations unavailable; using fallback:", error);
+        return null;
+      }),
     ]);
 
   const lo = subjectData.learning_outcomes.find(
@@ -359,6 +389,36 @@ export async function fetchOutcomeDetail(
     outcomeNameByCode,
   );
 
+  const matchingAI = aiData?.recommendations.find(
+    (item) => item.lo_code.toUpperCase() === loCode,
+  );
+
+  const aiRecommendation = matchingAI?.ai_recommendation;
+
+  const strategies =
+    aiRecommendation && !aiRecommendation.error
+      ? [
+          {
+            id: `ai-priority-${loCode}`,
+            title: "Study priority",
+            why: aiRecommendation.explanation,
+            how: aiRecommendation.study_priority,
+          },
+          {
+            id: `ai-activity-${loCode}`,
+            title: "Recommended activities",
+            why: "Practice activities selected for your identified knowledge gap.",
+            how: aiRecommendation.learning_activities.join(" • "),
+          },
+          {
+            id: `ai-exercise-${loCode}`,
+            title: "Practical exercise",
+            why: "Apply the learning outcome in a focused practical task.",
+            how: aiRecommendation.practical_exercise,
+          },
+        ]
+      : deriveStrategies(reasons);
+
   return {
     outcome: {
       id: outcomeId,
@@ -371,7 +431,7 @@ export async function fetchOutcomeDetail(
 
     reasons,
 
-    strategies: deriveStrategies(reasons),
+    strategies,
 
     // Moodle/content resources can be connected later.
     resources: [],
@@ -407,15 +467,15 @@ async function buildLearningPlan(): Promise<LearningPlan> {
   const [subjectData, masteryData, feedbackData] =
     await Promise.all([
       getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
+        `/subjects/${getSelectedSubjectCode()}`,
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${currentStudentId()}/mastery`,
+        `/students/${currentStudentId()}/mastery?${subjectQuery()}`,
       ),
 
       getJson<RawFeedback[]>(
-        `/students/${currentStudentId()}/feedback`,
+        `/students/${currentStudentId()}/feedback?${subjectQuery()}`,
       ),
     ]);
 
@@ -516,7 +576,7 @@ interface RawOutcomeHistory {
  */
 export async function fetchTrends(): Promise<OutcomeTrend[]> {
   const history = await getJson<RawOutcomeHistory[]>(
-    `/students/${currentStudentId()}/mastery/history`,
+    `/students/${currentStudentId()}/mastery/history?${subjectQuery()}`,
   );
 
   return history.map((item) => {
@@ -557,11 +617,11 @@ async function resolveOutcome(
   const [subjectData, masteryData] =
     await Promise.all([
       getJson<RawSubject>(
-        `/subjects/${DEMO_SUBJECT_CODE}`,
+        `/subjects/${getSelectedSubjectCode()}`,
       ),
 
       getJson<RawMasteryScore[]>(
-        `/students/${currentStudentId()}/mastery`,
+        `/students/${currentStudentId()}/mastery?${subjectQuery()}`,
       ),
     ]);
 
@@ -591,10 +651,11 @@ async function resolveOutcome(
 // QUIZ
 // ---------------------------------------------------------------------------
 
-interface RawAdaptiveQuiz {
+interface RawGeneratedQuiz {
+  quiz_id: string;
   lo_code: string;
   lo_description: string;
-  mastery: number;
+  mastery_before: number;
   difficulty: "foundational" | "intermediate" | "advanced";
   focus_areas: string[];
   questions: QuizQuestion[];
@@ -606,40 +667,30 @@ export async function fetchQuiz(
   const resolved =
     await resolveOutcome(outcomeId);
 
-  if (!resolved) {
+  if (!resolved?.code) {
     return null;
   }
 
   // Questions are generated by the AI from this outcome, the student's
   // feedback and knowledge gaps, at a difficulty matched to their mastery.
-  try {
-    const generated = await getJson<RawAdaptiveQuiz>(
-      `/students/${currentStudentId()}/quiz?lo_code=${encodeURIComponent(
-        resolved.code,
-      )}`,
-    );
+  // The answer key stays on the server.
+  const generated = await getJson<RawGeneratedQuiz>(
+    `/students/${currentStudentId()}/quiz/${encodeURIComponent(
+      resolved.code,
+    )}?${subjectQuery()}`,
+  );
 
-    return {
-      outcomeId,
-      outcomeCode: resolved.code,
-      outcomeName: resolved.name,
-      masteryBefore: resolved.mastery,
-      questions: generated.questions,
-      source: "ai",
-      difficulty: generated.difficulty,
-      focusAreas: generated.focus_areas,
-    };
-  } catch {
-    // AI unavailable: fall back to the general study-skills questions.
-    return {
-      outcomeId,
-      outcomeCode: resolved.code,
-      outcomeName: resolved.name,
-      masteryBefore: resolved.mastery,
-      questions: mock.genericQuizQuestions,
-      source: "sample",
-    };
-  }
+  return {
+    quizId: generated.quiz_id,
+    outcomeId,
+    outcomeCode: generated.lo_code,
+    outcomeName: generated.lo_description,
+    masteryBefore: Math.round(generated.mastery_before),
+    questions: generated.questions,
+    source: "ai",
+    difficulty: generated.difficulty,
+    focusAreas: generated.focus_areas,
+  };
 }
 
 // ---------------------------------------------------------------------------
@@ -650,41 +701,17 @@ export async function submitQuiz(
   quiz: Quiz,
   answers: Record<string, string>,
 ): Promise<QuizResult> {
-  const wrong: {
-    question: QuizQuestion;
-    chosenKey: string;
-  }[] = [];
-
-  let correct = 0;
-
-  for (const question of quiz.questions) {
-    const chosenKey =
-      answers[question.id] ?? "";
-
-    if (
-      chosenKey === question.correctKey
-    ) {
-      correct += 1;
-    } else {
-      wrong.push({
-        question,
-        chosenKey,
-      });
-    }
-  }
-
-  const total = quiz.questions.length;
-
   if (!quiz.outcomeCode) {
     throw new Error(
       "Could not resolve learning outcome",
     );
   }
 
-  // Save the completed quiz to the backend.
-  // Backend also recalculates mastery.
+  // The server marks the quiz, saves the attempt and recalculates mastery.
   const response = await fetch(
-    `${API_BASE_URL}/students/${currentStudentId()}/quiz-attempts`,
+    `${API_BASE_URL}/students/${currentStudentId()}/quiz/${encodeURIComponent(
+      quiz.outcomeCode,
+    )}/submit?${subjectQuery()}`,
     {
       method: "POST",
 
@@ -694,37 +721,30 @@ export async function submitQuiz(
       },
 
       body: JSON.stringify({
-        lo_code: quiz.outcomeCode,
-        score: correct,
-        total_questions: total,
+        quiz_id: quiz.quizId,
+        answers,
       }),
     },
   );
 
   if (!response.ok) {
     throw new Error(
-      "Failed to save quiz attempt",
+      "Failed to submit quiz",
     );
   }
 
   const result = await response.json();
 
-  const attempt = result.data;
+  const data = result.data;
 
   return {
-    outcomeCode: quiz.outcomeCode,
+    outcomeCode: data.outcome_code,
     outcomeName: quiz.outcomeName,
-    correct,
-    total,
-
-    // These now come directly from the backend.
-    masteryBefore:
-      Math.round(attempt.mastery_before),
-
-    masteryAfter:
-      Math.round(attempt.mastery_after),
-
-    review: wrong,
+    correct: data.correct,
+    total: data.total,
+    masteryBefore: Math.round(data.mastery_before),
+    masteryAfter: Math.round(data.mastery_after),
+    review: data.review,
   };
 }
 
@@ -740,7 +760,7 @@ export async function submitQuiz(
  */
 export async function fetchKnowledgeGaps(): Promise<KnowledgeGapAnalysis> {
   return getJson<KnowledgeGapAnalysis>(
-    `/students/${currentStudentId()}/knowledge-gaps`,
+    `/students/${currentStudentId()}/knowledge-gaps?${subjectQuery()}`,
   );
 }
 // ---------------------------------------------------------------------------
@@ -753,7 +773,7 @@ export async function fetchKnowledgeGaps(): Promise<KnowledgeGapAnalysis> {
  */
 export async function fetchAiStudyPlan(): Promise<AiGapPlan[]> {
   const data = await getJson<{ recommendations: AiGapPlan[] }>(
-    `/students/${currentStudentId()}/ai-recommendations`,
+    `/students/${currentStudentId()}/ai-recommendations?${subjectQuery()}`,
   );
 
   // The analyser can report the same gap twice; keep one plan per gap.
@@ -764,4 +784,31 @@ export async function fetchAiStudyPlan(): Promise<AiGapPlan[]> {
     seen.add(key);
     return true;
   });
+}
+
+// ---------------------------------------------------------------------------
+// SUBJECTS
+// ---------------------------------------------------------------------------
+
+export interface SubjectOption {
+  code: string;
+  name: string;
+}
+
+export async function fetchSubjects(): Promise<SubjectOption[]> {
+  const subjects = await getJson<
+    Array<{
+      code: string;
+      name: string;
+    }>
+  >("/subjects");
+
+  return subjects.map((subject) => ({
+    code: subject.code,
+    name: subject.name,
+  }));
+}
+
+export function getCurrentSubjectCode(): string {
+  return getSelectedSubjectCode();
 }

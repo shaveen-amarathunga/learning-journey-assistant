@@ -1,22 +1,79 @@
 [
   {
+    "subject_code": "CSE3CAP",
     "lo_code": "LO1",
     "description": "Apply software engineering principles to design and implement a working system."
   },
   {
+    "subject_code": "CSE3CAP",
     "lo_code": "LO2",
     "description": "Collaborate effectively in an agile team using version control and sprint-based delivery."
   },
   {
+    "subject_code": "CSE3CAP",
     "lo_code": "LO3",
     "description": "Design and query relational databases to support application requirements."
   },
   {
+    "subject_code": "CSE3CAP",
     "lo_code": "LO4",
     "description": "Develop and consume RESTful APIs following industry best practices."
   },
   {
+    "subject_code": "CSE3CAP",
     "lo_code": "LO5",
     "description": "Communicate technical decisions clearly through written documentation and oral presentation."
+  },
+
+  {
+    "subject_code": "CSE2ML",
+    "lo_code": "LO1",
+    "description": "Prepare and preprocess datasets for machine learning, including handling missing values, encoding categorical variables, and feature scaling."
+  },
+  {
+    "subject_code": "CSE2ML",
+    "lo_code": "LO2",
+    "description": "Apply supervised machine learning algorithms to classification and regression problems."
+  },
+  {
+    "subject_code": "CSE2ML",
+    "lo_code": "LO3",
+    "description": "Evaluate machine learning models using appropriate metrics, cross-validation, and analysis of overfitting and underfitting."
+  },
+  {
+    "subject_code": "CSE2ML",
+    "lo_code": "LO4",
+    "description": "Improve machine learning model performance using hyperparameter tuning and feature selection."
+  },
+  {
+    "subject_code": "CSE2ML",
+    "lo_code": "LO5",
+    "description": "Apply unsupervised learning and clustering techniques to identify patterns in data."
+  },
+
+  {
+    "subject_code": "CSE2DBF",
+    "lo_code": "LO1",
+    "description": "Design relational data models using entities, attributes, relationships, primary keys, and foreign keys."
+  },
+  {
+    "subject_code": "CSE2DBF",
+    "lo_code": "LO2",
+    "description": "Apply normalization principles to improve relational database design."
+  },
+  {
+    "subject_code": "CSE2DBF",
+    "lo_code": "LO3",
+    "description": "Write SQL queries using filtering, joins, grouping, subqueries, and aggregate functions."
+  },
+  {
+    "subject_code": "CSE2DBF",
+    "lo_code": "LO4",
+    "description": "Apply database integrity, transaction, constraint, and indexing concepts."
+  },
+  {
+    "subject_code": "CSE2DBF",
+    "lo_code": "LO5",
+    "description": "Transform conceptual database designs into relational schemas and implement them using a DBMS."
   }
 ]

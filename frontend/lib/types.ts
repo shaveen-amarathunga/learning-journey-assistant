@@ -101,12 +101,13 @@ export interface QuizQuestion {
   id: string;
   prompt: string;
   options: QuizOption[];
-  correctKey: string;
+  correctKey?: string;
   reviewLabel: string; // short label used on the results screen
   explanation?: string; // why the correct answer is right (AI quizzes)
 }
 
 export interface Quiz {
+  quizId: string;
   outcomeId: string;
   outcomeCode?: string;
   outcomeName: string;
@@ -158,4 +159,26 @@ export interface AiPlanDetails {
 
 export interface AiGapPlan extends KnowledgeGap {
   ai_recommendation: AiPlanDetails;
+}
+
+export interface AIRecommendationContent {
+  explanation: string;
+  learning_activities: string[];
+  practical_exercise: string;
+  study_priority: string;
+  error?: string;
+}
+
+export interface AIRecommendation {
+  lo_code: string;
+  knowledge_gap: string;
+  score: number;
+  feedback: string;
+  ai_recommendation: AIRecommendationContent;
+}
+
+export interface AIRecommendationResponse {
+  student_id: string;
+  count: number;
+  recommendations: AIRecommendation[];
 }
