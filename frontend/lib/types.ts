@@ -68,6 +68,11 @@ export interface LearningPlan {
   subjectCode: string;
   generatedFrom: string; // short description
   steps: PlanStep[];
+  priorityOutcomes?: {
+    code: string;
+    name: string;
+    mastery: number;
+  }[];
 }
 
 export interface TrendPoint {

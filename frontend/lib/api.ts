@@ -525,6 +525,13 @@ async function buildLearningPlan(): Promise<LearningPlan> {
     subjectCode: subjectData.code,
     generatedFrom:
       "generated from your weakest outcomes",
+    priorityOutcomes: weakest.flatMap((mastery) => {
+      const code = (mastery.lo_code ?? "").toUpperCase();
+
+      return code
+        ? [{ code, name: nameByCode.get(code) ?? code, mastery: mastery.score }]
+        : [];
+    }),
     steps,
   });
 }
