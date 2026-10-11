@@ -1,5 +1,5 @@
 import * as mock from "./mock-data";
-import { getAccessToken, getSession } from "./auth";
+import { getAccessToken, getSession, signOut } from "./auth";
 import { reflectionSteps } from "./reflections";
 import { deriveStrategies } from "./strategies";
 import type {
@@ -115,6 +115,20 @@ interface RawQuizAttempt {
 // API helper
 // ---------------------------------------------------------------------------
 
+let redirectingForUnauthorized = false;
+
+function handleUnauthorized(): void {
+  if (typeof window === "undefined") return;
+
+  signOut();
+  if (redirectingForUnauthorized || window.location.pathname === "/login") {
+    return;
+  }
+
+  redirectingForUnauthorized = true;
+  window.location.replace("/login");
+}
+
 /**
  * GET a backend response with the shape:
  *
@@ -136,6 +150,7 @@ async function getJson<T>(path: string): Promise<T> {
   });
 
   if (!res.ok) {
+    if (res.status === 401) handleUnauthorized();
     throw new Error(`Request failed (${res.status}) for ${path}`);
   }
 
@@ -734,6 +749,7 @@ export async function submitQuiz(
   );
 
   if (!response.ok) {
+    if (response.status === 401) handleUnauthorized();
     throw new Error(
       "Failed to submit AI quiz",
     );
