@@ -1,4 +1,5 @@
 import { API_BASE_URL, getSession, signOut } from "./auth";
+import { getPlanRound, nextPlanRound } from "./planProgress";
 import { reflectionSteps } from "./reflections";
 import { deriveStrategies } from "./strategies";
 import type {
@@ -462,8 +463,12 @@ function withReflections(
 /**
  * Build a learning plan using the student's
  * two weakest learning outcomes.
+ *
+ * Each round (see Regenerate plan) uses the next study strategy for an
+ * outcome and gives the steps new ids, so the regenerated plan starts
+ * unticked. Round 0 keeps the original ids.
  */
-async function buildLearningPlan(): Promise<LearningPlan> {
+async function buildLearningPlan(round: number): Promise<LearningPlan> {
   const [subjectData, masteryData, feedbackData] =
     await Promise.all([
       getJson<RawSubject>(
@@ -498,6 +503,7 @@ async function buildLearningPlan(): Promise<LearningPlan> {
     .slice(0, 2);
 
   const steps: PlanStep[] = [];
+  const idSuffix = round > 0 ? `-r${round}` : "";
 
   for (const mastery of weakest) {
     const code =
@@ -514,12 +520,13 @@ async function buildLearningPlan(): Promise<LearningPlan> {
       nameByCode,
     );
 
-    const [topStrategy] = deriveStrategies(reasons);
+    const strategies = deriveStrategies(reasons);
+    const strategy = strategies[round % Math.max(strategies.length, 1)];
 
-    if (topStrategy) {
+    if (strategy) {
       steps.push({
-        id: `plan-${code}-strategy`,
-        title: topStrategy.how,
+        id: `plan-${code}-strategy${idSuffix}`,
+        title: strategy.how,
         estMinutes: 25,
         targetOutcomeName: code,
         status: "todo",
@@ -527,7 +534,7 @@ async function buildLearningPlan(): Promise<LearningPlan> {
     }
 
     steps.push({
-      id: `plan-${code}-quiz`,
+      id: `plan-${code}-quiz${idSuffix}`,
       title: `Complete a practice quiz — ${code}`,
       estMinutes: 10,
       targetOutcomeName: code,
@@ -544,12 +551,16 @@ async function buildLearningPlan(): Promise<LearningPlan> {
   });
 }
 
+function planScope(): string {
+  return `${currentStudentId()}.${getSelectedSubjectCode()}`;
+}
+
 export async function fetchLearningPlan(): Promise<LearningPlan> {
-  return buildLearningPlan();
+  return buildLearningPlan(getPlanRound(planScope()));
 }
 
 export async function regenerateLearningPlan(): Promise<LearningPlan> {
-  return buildLearningPlan();
+  return buildLearningPlan(nextPlanRound(planScope()));
 }
 
 // ---------------------------------------------------------------------------
